@@ -3,7 +3,7 @@
 #Generate Lexicon
     #Code provided by Marieke
 
-#Production
+# /////////// Production ///////////
     #Input: dialogue history D, lexicon L, order n, intended referent r
     #Output: signal s, dialogue history D
 
@@ -17,13 +17,30 @@
         return s, D
 
 
-
-#Interpretation
+# /////////// Interpretation ///////////
     #Input: dialogue history D, Lexicon L, order n, observed signal s
     #Output: r, huh?, n+1, r (including recursion)
     #Calling functions:
         #conditional entropy over probability distributions
-        #
+        #itself
+        #production: as means of OIR
+
+    def listener(D, L, n, s, n_t):
+        # if n = 0 and D is not empty
+        s = conjunction(D, s)
+
+        H = conditional_entropy(r, s, L)
+
+        # when entropy low or when n = n_t --> recursion till n=0
+        act = interpretation(D, L, n, s)
+
+        # if entropy high
+        # if n < n_t
+        act = interpretation(D, L, n + 1, s)
+        # else: turn to speaker --> produces new signal
+        act = production(D, L, 0, i)
+
+        return act
 
     def interpretation(D, L, n, s, i):
         #if n = 0 and D is not empty
@@ -55,10 +72,18 @@
 
 
 # -------------------------------------- Part 2: Simulation --------------------------------------
+#                                   Simulate a Single Conversation
 
-#Simulate a Single Conversation
+#Initializing Agents: order of pragmatic reasoning, ambiguity level lexicon, type (listener, speaker), optional: entropy threshold
+class agent(Agent):
+    #Initialization
+    def __init__(self, order, ambiguity_level, agent_type):
+        self.n = order
+        self.a = ambiguity_level
+        self.type = agent_type
 
-#Initializing Agents
+Agent1 = agent(0, 1, "speaker")
+Agent2 = agent(0, 1, "listener")
 
 #Lexicon
 
