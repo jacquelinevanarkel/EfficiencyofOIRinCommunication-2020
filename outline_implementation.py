@@ -1,3 +1,6 @@
+# Necessary imports
+import pandas as pd
+
 # -------------------------------------- Part 1: RSA Implementation --------------------------------------
 
 #Generate Lexicon
@@ -64,10 +67,25 @@
 
         return H
 
-    #THINK ABOUT THIS!!!!
-    def conjunction(D, L):
-
-        return L
+    #Depends on how the lexicon is structured: as a pandas dataframe? --> change accordingly
+    #So this is not correct yet, I stopped in the middle as I think it would be useful to first see the structure
+    #of the lexicon before defining this 
+    def conjunction(D, L = None, s = None):
+        if L is not None:
+            for index, row in L.iterrows():
+                for s_old in D:
+                    for x in L.iloc:
+                        if s_old == 1 & L.iloc[x] == 1:
+                            L_new[x] = 1
+                        else
+                            L_new[x] = 0
+        else:
+            for s_old in D:
+                    if s_old == 1 & s == 1:
+                        L_new[x] = 1
+                    else
+                        L_new[x] = 0
+        return L_new
 
 
 
@@ -86,7 +104,5 @@ Agent1 = agent(0, 1, "speaker")
 Agent2 = agent(0, 1, "listener")
 
 #Lexicon
-
-#Order of Pragmatic Reasoning
 
 #Intention: ? --> randomly generated?
