@@ -1,12 +1,12 @@
 # Necessary imports
 import pandas as pd
 
-# -------------------------------------- Part 1: RSA Implementation --------------------------------------
+# --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
 
 #Generate Lexicon
     #Code provided by Marieke
 
-# ////////////////////////// Production //////////////////////////
+# ///////////////////////////////////////////////////// Production /////////////////////////////////////////////////////
 class production:
 #Input: dialogue history D, lexicon L, order n, intended referent i
 #Output: signal s, dialogue history D
@@ -20,26 +20,26 @@ class production:
 
     def produce(self):
         if n = 0:
-            production_literal(L, i, D)
+            production_literal(self)
         else:
-            production_pragmatic(n)
+            production_pragmatic(self)
 
-    def production_literal(self, L, i, D):
+    def production_literal(self):
         #if D is not empty
-        L = conjunction(D, L)
+        L = conjunction(self.D, self.L)
 
         #calculate which signal s maximizes the probability, using the new lexicon if D not empty
 
         #update D
         return s, D
 
-    def production_pragmatic(self, n):
+    def production_pragmatic(self):
         #calculate which signal s maximizes the probability
 
         return s
 
 
-# ////////////////////////// Interpretation //////////////////////////
+# /////////////////////////////////////////////////// Interpretation ///////////////////////////////////////////////////
 class interpretation:
     #Input: dialogue history D, Lexicon L, order n, observed signal s, intended referent i (in case of production (?))
     #       threshold pragmatic reasoning n_t, turns, entropy threshold
@@ -60,18 +60,18 @@ class interpretation:
 
     def interpret(self):
         if n = 0:
-            interpretation_literal(D, L, s)
+            interpretation_literal(self)
         else:
-            interpretation_pragmatic(L, n, s, n_t)
+            interpretation_pragmatic(self)
 
-    def interpretation_literal(D, L, s):
+    def interpretation_literal(self):
         # if D is not empty
-        s = conjunction(D, s)
+        s = conjunction(self.D, self.s)
 
         #calculate posterior distribution given s and D
 
         #calculate entropy of posterior distribution
-        H = conditional_entropy(r, s, L)
+        H = conditional_entropy(r, self.s, self.L)
 
         # when H < H_t: output inferred referent
         # output = referent
@@ -82,24 +82,27 @@ class interpretation:
 
         return output
 
-    def interpretation_pragmatic(L, n, s, n_t):
+    def interpretation_pragmatic(self):
         #calculate posterior distribution given s and L
 
         #calculate the entropy of posterior distribution
-        H = conditional_entropy(r, s, L)
+        H = conditional_entropy(r, self.s, self.L)
 
         #if H > H_t & n < n_t
-        interpretation(L, n+1, s, n_t)
+        interpretation(self.L, self.n+1, self.s, self.n_t)
 
         # if H < H_t or when n = n_t --> recursion till n=0
         #interpretation(D, L, n, s)
 
         return r
 
-    def conditional_entropy(r, s, L):
+    def conditional_entropy(self, r):
 
         return H
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#CHANGE THIS!!!!!!
 #Depends on how the lexicon is structured: as a pandas dataframe? --> change accordingly
 #So this is not correct yet, I stopped in the middle as I think it would be useful to first see the structure
 #of the lexicon before defining this
@@ -122,7 +125,7 @@ def conjunction(D, L = None, s = None):
 
 
 
-# -------------------------------------- Part 2: Simulation --------------------------------------
+# ------------------------------------------------- Part 2: Simulation -------------------------------------------------
 #                                   Simulate a Single Conversation
 
 #Initializing Agents: order of pragmatic reasoning, ambiguity level lexicon, type (listener, speaker), optional: entropy threshold
@@ -134,8 +137,8 @@ class agent:
         self.type = agentType
         self.H_t = entropyThreshold
 
-Agent1 = agent(0, 1, L, "speaker")
-Agent2 = agent(0, 1, L, "listener")
+Agent1 = agent(0, 1, L, "speaker", H_t)
+Agent2 = agent(0, 1, L, "listener", H_t)
 
 #Lexicon: include ambiguity level
 
@@ -143,24 +146,33 @@ Agent2 = agent(0, 1, L, "listener")
 
 #One interaction/Communication
 def interaction(agent1, agent2):
+    output = pd.DataFrame()
     turns = 0
-    if agent1.type = "speaker":
-        production().produce()
+    if agent1.type == "speaker":
+        producedSignal = production().produce()
         turns += 1
-        interpretation().interpret()
+        listenerOutput = interpretation().interpret()
+        turns += 1
+        while listener_output == "OIR":
+            producedSignal = production().produce()
+            turns += 1
+            listenerOutput = interpretation().interpret()
+            turns += 1
     else:
         #agent2 produces
-        production().produce()
+        producedSignal = production().produce()
         turns += 1
-        listener_output = interpretation().interpret()
-        if listener_output == "OIR":
+        listenerOutput = interpretation().interpret()
+        turns += 1
+        while listenerOutput == "OIR":
+            producedSignal = production().produce()
             turns += 1
-            production().produce()
-        else:
-            break
+            listenerOutput = interpretation().interpret()
+            turns += 1
+    output = output.append(producedSignal, listenerOutput, turns, agent1.n)
     return turns
 
-# ////////////////////////// Measurements: dependent variables //////////////////////////
+# ///////////////////////////////////////// Measurements: dependent variables /////////////////////////////////////////
 #Communicative success
 def communicativeSuccess(i, r):
     if i == r:
@@ -179,7 +191,7 @@ def averageComSuc():
 
 #Complexity: also a measurement, but not included here
 
-# ////////////////////////// Running Simulations //////////////////////////
+# //////////////////////////////////////////////// Running Simulations ////////////////////////////////////////////////
 def simulation(n_interactions, lexicon, ambiguityLevel):
 
     return dataframe
