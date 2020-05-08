@@ -1,5 +1,6 @@
 # Necessary imports
 import pandas as pd
+import numpy as np
 
 # --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
 
@@ -29,12 +30,13 @@ class production:
         L = conjunction(self.D, self.L)
 
         #calculate which signal s maximizes the probability, using the new lexicon if D not empty
+        # --> call function!
 
         #update D
         return s, D
 
     def production_pragmatic(self):
-        #calculate which signal s maximizes the probability
+        #calculate which signal s maximizes the probability --> call function
 
         return s
 
@@ -74,7 +76,7 @@ class interpretation:
         H = conditional_entropy(r, self.s, self.L)
 
         # when H < H_t: output inferred referent
-        # output = referent
+        # output = referent --> call function
 
         # when H > H_t:
         # turn to speaker --> output = OIR
@@ -92,7 +94,8 @@ class interpretation:
         interpretation(self.L, self.n+1, self.s, self.n_t)
 
         # if H < H_t or when n = n_t --> recursion till n=0
-        #interpretation(D, L, n, s)
+        #save when n_t is reached!
+        #interpretation(D, L, n, s) --> call function!
 
         return r
 
@@ -103,9 +106,7 @@ class interpretation:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #CHANGE THIS!!!!!!
-#Depends on how the lexicon is structured: as a pandas dataframe? --> change accordingly
-#So this is not correct yet, I stopped in the middle as I think it would be useful to first see the structure
-#of the lexicon before defining this
+#array: check numpy!
 def conjunction(D, L = None, s = None):
     if L is not None:
         for index, row in L.iterrows():
@@ -144,8 +145,9 @@ Agent2 = agent(0, 1, L, "listener", H_t)
 
 #Intention: randomly generated
 
-#One interaction/Communication
+#One interaction/Communication: implementation not done yet!!!
 def interaction(agent1, agent2):
+    #Initialize this with column names
     output = pd.DataFrame()
     turns = 0
     if agent1.type == "speaker":
@@ -170,7 +172,7 @@ def interaction(agent1, agent2):
             listenerOutput = interpretation().interpret()
             turns += 1
     output = output.append(producedSignal, listenerOutput, turns, agent1.n)
-    return turns
+    return output
 
 # ///////////////////////////////////////// Measurements: dependent variables /////////////////////////////////////////
 #Communicative success
