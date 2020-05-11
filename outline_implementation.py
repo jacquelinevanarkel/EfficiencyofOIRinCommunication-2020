@@ -125,26 +125,6 @@ class interpretation:
 
         return combined_signals
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-# You either have a signal + signal (L) or Lexicon + signal (S)
-# def conjunction(D, L = None, s = None):
-#     if L is not None:
-#         for index, row in L.iterrows():
-#             for s_old in D:
-#                 for x in L.iloc:
-#                     if s_old == 1 & L.iloc[x] == 1:
-#                         L_new[x] = 1
-#                     else
-#                         L_new[x] = 0
-#     else:
-#         for s_old in D:
-#                 if s_old == 1 & s == 1:
-#                     L_new[x] = 1
-#                 else
-#                     L_new[x] = 0
-#     return L_new
-
-
 
 # ------------------------------------------------- Part 2: Simulation -------------------------------------------------
 #                                            Simulate a Single Conversation
