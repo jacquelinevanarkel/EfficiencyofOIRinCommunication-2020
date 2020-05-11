@@ -1,12 +1,9 @@
 # Necessary imports
 import pandas as pd
 import numpy as np
+import lexicon_retriever as lex_retriever
 
 # --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
-
-#Generate Lexicon
-    #Code provided by Marieke
-
 # ///////////////////////////////////////////////////// Production /////////////////////////////////////////////////////
 class production:
 #Input: dialogue history D, lexicon L, order n, intended referent i
@@ -27,7 +24,7 @@ class production:
 
     def production_literal(self):
         #if D is not empty
-        L = conjunction(self.D, self.L)
+        L = conjunction(self)
 
         #calculate which signal s maximizes the probability, using the new lexicon if D not empty
         # --> call function!
@@ -39,6 +36,21 @@ class production:
         #calculate which signal s maximizes the probability --> call function
 
         return s
+
+    def conjunction(self):
+
+        newLexicon = np.zeros(self.L.shape)
+        index_signal = 0
+
+        for signal in self.L:
+            index_referent = 0
+            for r, r2 in zip(self.D[:-1], signal):
+                if r == 1 & r2 == 1:
+                    newLexicon[index_signal, index_referent] = 1
+                index_referent += 1
+            index_signal +=1
+
+        return newLexicon
 
 
 # /////////////////////////////////////////////////// Interpretation ///////////////////////////////////////////////////
@@ -68,7 +80,7 @@ class interpretation:
 
     def interpretation_literal(self):
         # if D is not empty
-        s = conjunction(self.D, self.s)
+        s = conjunction(self)
 
         #calculate posterior distribution given s and D
 
@@ -103,31 +115,39 @@ class interpretation:
 
         return H
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    def conjunction(self):
+        combined_signals = np.zeros(L.shape[1])
+        index = 0
+        for r, r2 in zip(self.D[:-1], self.s):
+            if r == 1 & r2 ==1:
+                combined_signals[index] = 1
+            index += 1
 
-#CHANGE THIS!!!!!!
-#array: check numpy!
-def conjunction(D, L = None, s = None):
-    if L is not None:
-        for index, row in L.iterrows():
-            for s_old in D:
-                for x in L.iloc:
-                    if s_old == 1 & L.iloc[x] == 1:
-                        L_new[x] = 1
-                    else
-                        L_new[x] = 0
-    else:
-        for s_old in D:
-                if s_old == 1 & s == 1:
-                    L_new[x] = 1
-                else
-                    L_new[x] = 0
-    return L_new
+        return combined_signals
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+# You either have a signal + signal (L) or Lexicon + signal (S)
+# def conjunction(D, L = None, s = None):
+#     if L is not None:
+#         for index, row in L.iterrows():
+#             for s_old in D:
+#                 for x in L.iloc:
+#                     if s_old == 1 & L.iloc[x] == 1:
+#                         L_new[x] = 1
+#                     else
+#                         L_new[x] = 0
+#     else:
+#         for s_old in D:
+#                 if s_old == 1 & s == 1:
+#                     L_new[x] = 1
+#                 else
+#                     L_new[x] = 0
+#     return L_new
 
 
 
 # ------------------------------------------------- Part 2: Simulation -------------------------------------------------
-#                                   Simulate a Single Conversation
+#                                            Simulate a Single Conversation
 
 #Initializing Agents: order of pragmatic reasoning, ambiguity level lexicon, type (listener, speaker), optional: entropy threshold
 class agent:
@@ -141,9 +161,17 @@ class agent:
 Agent1 = agent(0, 1, L, "speaker", H_t)
 Agent2 = agent(0, 1, L, "listener", H_t)
 
-#Lexicon: include ambiguity level
+#Generate Lexicons
+lexicons_df = pd.read_json('lexiconset.json')
+# 5 lexicons with 10 signals, 8 referents, and an ambiguity level of 0.5
+n_signals = 10
+n_referents = 8
+ambiguity_level = 0.5
+n_lexicons = 5
+lexicons = lex_retriever.retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicons)
 
-#Intention: randomly generated
+#Intention: randomly generated from uniform distribution
+intention = np.random.randint(n_referents+1)
 
 #One interaction/Communication: implementation not done yet!!!
 def interaction(agent1, agent2):
