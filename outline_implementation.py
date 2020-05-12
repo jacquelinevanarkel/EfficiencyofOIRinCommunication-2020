@@ -10,17 +10,17 @@ class production:
 #Output: signal s, dialogue history D
 
     # Initialization
-    def __init__(self, lexicon, intention, n=0, dialogueHistory=None):
+    def __init__(self, lexicon, intention, n, dialogue_history=None):
         self.L = lexicon
         self.i = intention
         self.n = n
-        self.D = dialogueHistory
+        self.D = dialogue_history
 
     def produce(self):
         if n = 0:
-            production_literal(self)
+            return production_literal(self)
         else:
-            production_pragmatic(self)
+            return production_pragmatic(self)
 
     def production_literal(self):
         #if D is not empty
@@ -39,18 +39,18 @@ class production:
 
     def conjunction(self):
 
-        newLexicon = np.zeros(self.L.shape)
+        new_lexicon = np.zeros(self.L.shape)
         index_signal = 0
 
         for signal in self.L:
             index_referent = 0
             for r, r2 in zip(self.D[:-1], signal):
                 if r == 1 & r2 == 1:
-                    newLexicon[index_signal, index_referent] = 1
+                    new_lexicon[index_signal, index_referent] = 1
                 index_referent += 1
             index_signal +=1
 
-        return newLexicon
+        return new_lexicon
 
 
 # /////////////////////////////////////////////////// Interpretation ///////////////////////////////////////////////////
@@ -64,13 +64,13 @@ class interpretation:
         #production: as means of OIR
 
     # Initialization
-    def __init__(self, lexicon, signal, n_t = 2, n = 0, dialogueHistory=None, entropyThreshold):
+    def __init__(self, lexicon, signal, n, entropy_threshold, n_t = 2, dialogue_history=None):
         self.L = lexicon
         self.s = signal
         self.n_t = n_t
         self.n = n
-        self.D = dialogueHistory
-        self.H_t = entropyThreshold
+        self.D = dialogue_history
+        self.H_t = entropy_threshold
 
     def interpret(self):
         if n = 0:
@@ -94,9 +94,12 @@ class interpretation:
         # turn to speaker --> output = OIR
         output = "OIR"
 
-        return output
+        return output, 0
 
     def interpretation_pragmatic(self):
+        #Initialize variables
+        n_t_reached = 0
+
         #calculate posterior distribution given s and L
 
         #calculate the entropy of posterior distribution
@@ -109,7 +112,7 @@ class interpretation:
         #save when n_t is reached!
         #interpretation(D, L, n, s) --> call function!
 
-        return r
+        return r, n_t_reached
 
     def conditional_entropy(self, r):
 
@@ -132,59 +135,37 @@ class interpretation:
 #Initializing Agents: order of pragmatic reasoning, ambiguity level lexicon, type (listener, speaker), optional: entropy threshold
 class agent:
     #Initialization
-    def __init__(self, order, lexicon, agentType, entropyThreshold):
+    def __init__(self, order, agent_type, entropy_threshold):
         self.n = order
-        self.L = lexicon
-        self.type = agentType
-        self.H_t = entropyThreshold
+        self.type = agent_type
+        self.H_t = entropy_threshold
 
-Agent1 = agent(0, 1, L, "speaker", H_t)
-Agent2 = agent(0, 1, L, "listener", H_t)
-
-#Generate Lexicons
-lexicons_df = pd.read_json('lexiconset.json')
-# 5 lexicons with 10 signals, 8 referents, and an ambiguity level of 0.5
-n_signals = 10
-n_referents = 8
-ambiguity_level = 0.5
-n_lexicons = 5
-lexicons = lex_retriever.retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicons)
-
-#Intention: randomly generated from uniform distribution
-intention = np.random.randint(n_referents+1)
-
-#One interaction/Communication: implementation not done yet!!!
-def interaction(agent1, agent2):
-    #Initialize this with column names
-    output = pd.DataFrame()
+def interaction(speaker, listener, lexicon):
     turns = 0
-    if agent1.type == "speaker":
-        producedSignal = production().produce()
+
+    #Intention: randomly generated from uniform distribution
+    n_referents = lexicon.shape[1]
+    intention = np.random.randint(n_referents + 1)
+
+    #Start interaction
+    produced_signal = production(lexicon, intention, speaker.n).produce()
+    turns += 1
+    listener_output, n_t_reached = interpretation(lexicon, produced_signal, listener.n, listener.H_t).interpret()
+    turns += 1
+    while listener_output == "OIR":
+        produced_signal = production(lexicon, intention, speaker.n).produce()
         turns += 1
-        listenerOutput = interpretation().interpret()
+        listener_output, n_t_reached = interpretation(lexicon, produced_signal, listener.n, listener.H_t).interpret()
         turns += 1
-        while listener_output == "OIR":
-            producedSignal = production().produce()
-            turns += 1
-            listenerOutput = interpretation().interpret()
-            turns += 1
-    else:
-        #agent2 produces
-        producedSignal = production().produce()
-        turns += 1
-        listenerOutput = interpretation().interpret()
-        turns += 1
-        while listenerOutput == "OIR":
-            producedSignal = production().produce()
-            turns += 1
-            listenerOutput = interpretation().interpret()
-            turns += 1
-    output = output.append(producedSignal, listenerOutput, turns, agent1.n)
+
+    #QUESTION: DO WE WANT TO SAVE THE IN BETWEEN SIGNALS (all the produced signals in a conversation)?
+    output = np.array([intention, listener_output, turns, speaker.n, communicative_success(intention,listener_output),
+                       n_t_reached])
     return output
 
 # ///////////////////////////////////////// Measurements: dependent variables /////////////////////////////////////////
 #Communicative success
-def communicativeSuccess(i, r):
+def communicative_success(i, r):
     if i == r:
         cs = 1
     else:
@@ -192,7 +173,8 @@ def communicativeSuccess(i, r):
 
     return cs
 
-def averageComSuc():
+#Actually, how the results are formatted now, I'd say to calculate this while analysing the data?
+def average_com_suc():
     sum = 0
     for i, r in interactions:
         sum += communicative_success(i, r)
@@ -202,6 +184,23 @@ def averageComSuc():
 #Complexity: also a measurement, but not included here
 
 # //////////////////////////////////////////////// Running Simulations ////////////////////////////////////////////////
-def simulation(n_interactions, lexicon, ambiguityLevel):
+def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, entropy_threshold):
+    #Initialize agents: order of pragmatic reasoning, agent type, entropy threshold
+    speaker = agent(order, "Speaker", entropy_threshold)
+    listener = agent(order, "Listener", entropy_threshold)
 
-    return dataframe
+    # Generate Lexicons
+    lexicons_df = pd.read_json('lexiconset.json')
+    n_lexicons = n_interactions
+    lexicons = lex_retriever.retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicons)
+
+    #Initliaze dataframe to store results
+    results = pd.DataFrame(
+        columns=["Intention Speaker", "Inferred Referent Listener", "Number of Turns", "Order of Reasoning",
+                 "Communicative Success", "Reached threshold n", "Ambiguity Level", "n_signals", "n_referents"])
+
+    for i in range(n_interactions):
+        result = interaction(speaker, listener, lexicons[i])
+        results.loc[len(results)] = np.concatenate((result, np.array([ambiguity_level, n_signals, n_referents]), axis=None)
+
+    return results
