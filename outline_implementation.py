@@ -6,8 +6,6 @@ import lexicon_retriever as lex_retriever
 # --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
 # ///////////////////////////////////////////////////// Production /////////////////////////////////////////////////////
 class production:
-#Input: dialogue history D, lexicon L, order n, intended referent i
-#Output: signal s, dialogue history D
 
     # Initialization
     def __init__(self, lexicon, intention, n, dialogue_history=None):
@@ -18,19 +16,27 @@ class production:
 
     def produce(self):
         if n = 0:
-            return production_literal(self)
+            return self.production_literal()
         else:
-            return production_pragmatic(self)
+            return self.production_pragmatic()
 
     def production_literal(self):
-        #if D is not empty
-        L = conjunction(self)
+        #QUESTION: In this case, you store a new lexicon after conjunction, so you do not have to make the calculation
+        #again, this is way more efficient, but is this right under our assumptions?
+        if self.D is not None:
+            self.L = self.conjunction()
 
         #calculate which signal s maximizes the probability, using the new lexicon if D not empty
-        # --> call function!
+        prob_lex = self.prob_literal()
+        max_s = np.amax(prob_lex, axis=0)[self.i]
+        indices = np.where(np.transpose(prob_lex)[i] == max_s)
+        s = np.random.choice(indices[0], 1, replace=False)
 
-        #update D
-        return s, D
+        #Update dialogue history D
+        if self.D is None:
+            self.D = []
+        self.D = self.D.append(s)
+        return int(s)
 
     def production_pragmatic(self):
         #calculate which signal s maximizes the probability --> call function
@@ -52,16 +58,23 @@ class production:
 
         return new_lexicon
 
+    def prob_literal(self):
+        #Initialize new lex for probabilities
+        prob_lex = np.zeros(self.L.shape)
+        i_r = 0
+
+        for r in np.transpose(self.L):
+            sum_s_prob = np.sum(r)
+            i_s = 0
+            for s in r:
+                prob_lex[i_s][i_r] = float(s)/float(sum_s_prob)
+                i_s += 1
+            i_r += 1
+
+        return prob_lex
 
 # /////////////////////////////////////////////////// Interpretation ///////////////////////////////////////////////////
 class interpretation:
-    #Input: dialogue history D, Lexicon L, order n, observed signal s, intended referent i (in case of production (?))
-    #       threshold pragmatic reasoning n_t, turns, entropy threshold
-    #Output: [r, huh? (--> production), n+1, r (including recursion)] --> intended referent
-    #Calling functions:
-        #conditional entropy over probability distributions
-        #conjunction
-        #production: as means of OIR
 
     # Initialization
     def __init__(self, lexicon, signal, n, entropy_threshold, n_t = 2, dialogue_history=None):
@@ -74,13 +87,13 @@ class interpretation:
 
     def interpret(self):
         if n = 0:
-            interpretation_literal(self)
+            self.interpretation_literal()
         else:
-            interpretation_pragmatic(self)
+            selfinterpretation_pragmatic()
 
     def interpretation_literal(self):
         # if D is not empty
-        s = conjunction(self)
+        s = self.conjunction()
 
         #calculate posterior distribution given s and D
 
@@ -103,7 +116,7 @@ class interpretation:
         #calculate posterior distribution given s and L
 
         #calculate the entropy of posterior distribution
-        H = conditional_entropy(r, self.s, self.L)
+        H = self.conditional_entropy(r)
 
         #if H > H_t & n < n_t
         interpretation(self.L, self.n+1, self.s, self.n_t)
@@ -184,6 +197,7 @@ def average_com_suc():
 #Complexity: also a measurement, but not included here
 
 # //////////////////////////////////////////////// Running Simulations ////////////////////////////////////////////////
+#Think about multiprocessing
 def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, entropy_threshold):
     #Initialize agents: order of pragmatic reasoning, agent type, entropy threshold
     speaker = agent(order, "Speaker", entropy_threshold)
