@@ -30,7 +30,7 @@ class production:
         prob_lex = self.prob_literal()
         max_s = np.amax(prob_lex, axis=0)[self.i]
         indices = np.where(np.transpose(prob_lex)[i] == max_s)
-        s = np.random.choice(indices[0], 1, replace=False)
+        s = int(np.random.choice(indices[0], 1, replace=False))
 
         #Update dialogue history D
         if self.D is None:
@@ -96,9 +96,13 @@ class interpretation:
         s = self.conjunction()
 
         #calculate posterior distribution given s and D
+        prob_lex = self.prob_literal()
+        max_r = np.amax(prob_lex, axis=1)[self.s]
+        indices = np.where(prob_lex[self.s] == max_r)
+        r = int(np.random.choice(indices[0], 1, replace=False))
 
         #calculate entropy of posterior distribution
-        H = conditional_entropy(r, self.s, self.L)
+        H = self.conditional_entropy(r)
 
         # when H < H_t: output inferred referent
         # output = referent --> call function
@@ -128,6 +132,12 @@ class interpretation:
         return r, n_t_reached
 
     def conditional_entropy(self, r):
+        #sum of:
+        # pragmatic/literal probability of r given the signal and the lexicon(or dialogue history)
+        # times
+        # log (1/prob as described above)
+
+
 
         return H
 
@@ -140,6 +150,21 @@ class interpretation:
             index += 1
 
         return combined_signals
+
+    def prob_literal(self):
+        #Initialize new lex for probabilities
+        prob_lex = np.zeros(self.L.shape)
+        i_s = 0
+
+        for s in self.L:
+            sum_s_prob = np.sum(s)
+            i_r = 0
+            for r in s:
+                prob_lex[i_s][i_r] = float(r)/float(sum_s_prob)
+                i_r += 1
+            i_s += 1
+
+        return prob_lex
 
 
 # ------------------------------------------------- Part 2: Simulation -------------------------------------------------
