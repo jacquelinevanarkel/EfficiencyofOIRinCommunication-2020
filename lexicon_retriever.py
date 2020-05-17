@@ -31,7 +31,7 @@ def retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicon
     print('')
     print("selected_lexicons converted to numpy array are:")
     print(selected_lexicons)
-    print("selected_lexicons.shape (i.e. dimensions of numpy array) is:")
+    print("selected_lexicons.shape (intention.e. dimensions of numpy array) is:")
     print(selected_lexicons.shape)
     random_indices = np.random.choice(np.arange(selected_lexicons.shape[0]), size=n_lexicons, replace=False) # chooses n_lexicons *unique* random integers in the range 0 to the number of lexicons in selected_lexicons
     print('')
@@ -40,7 +40,7 @@ def retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicon
     random_selection = selected_lexicons[random_indices]
     print("random_selection is:")
     print(random_selection)
-    print("random_selection.shape (i.e. dimensions of numpy array) is:")
+    print("random_selection.shape (intention.e. dimensions of numpy array) is:")
     print(random_selection.shape)
     return random_selection
 
