@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 import lexicon_retriever as lex_retriever
+import math
 
 # --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
 # ///////////////////////////////////////////////////// Production /////////////////////////////////////////////////////
@@ -11,7 +12,7 @@ class Production:
         """
         Initialization of class.
         :param lexicon: array; the lexicon used by the speaker
-        :param intention: int; the intended referent meant by the speaker
+        :param intention: int; the intended referent (index) meant by the speaker
         :param order: int; the order of pragmatic reasoning of the speaker
         :param dialogue_history: list; the previously produced signals
         """
@@ -27,7 +28,7 @@ class Production:
         :return: int; signal by calling the corresponding production function.
         """
 
-        if self.order = 0:
+        if self.order == 0:
             return self.production_literal()
         else:
             return self.production_pragmatic()
@@ -115,7 +116,7 @@ class Interpretation:
         """
         Initialization of class.
         :param lexicon: array; the lexicon used by the listener
-        :param signal: int; the received signal from the speaker
+        :param signal: int; the received signal (index) from the speaker
         :param order: int; order of pragmatic reasoning of the listener
         :param entropy_threshold: int; the entropy threshold
         :param order_threshold: int; the order of pragmatic reasoning threshold
@@ -137,7 +138,7 @@ class Interpretation:
         was reached (Boolean) by calling the corresponding production function
         """
 
-        if n = 0:
+        if self.order == 0:
             output, order_threshold_reached = self.interpretation_literal()
             return output, order_threshold_reached
         else:
@@ -156,7 +157,8 @@ class Interpretation:
 
         #Perform conjunction if a dialogue history is available, returning a combined signal (from previous signal +
         # current signal)
-        self.signal = self.conjunction()
+        if self.dialogue_history is not None:
+            self.lexicon[self.signal] = self.conjunction()
 
         #Calculate posterior distribution given the signal, lexicon, and dialogue history if not empty
         prob_lex = self.prob_literal()
@@ -165,14 +167,17 @@ class Interpretation:
         referent = int(np.random.choice(indices[0], 1, replace=False))
 
         #Calculate conditional entropy of posterior distribution
-        entropy = self.conditional_entropy(referent)
+        entropy = self.conditional_entropy()
 
         # when H < entropy_threshold: output inferred referent
         # output = referent --> call function
+        if entropy <= self.entropy_threshold:
+            output = referent
 
         # when H > entropy_threshold:
         # turn to speaker --> output = OIR
-        output = "OIR"
+        if entropy > self.entropy_threshold:
+            output = "OIR"
 
         return output, 0
 
@@ -189,22 +194,37 @@ class Interpretation:
 
         #Initialize the variable for whether the threshold of the order of pragmatic reasoning is reached
         order_threshold_reached = 0
+        #referent = None
 
         #Calculate posterior distribution given signal and lexicon
 
         #Calculate the conditional entropy of posterior distribution
-        entropy = self.conditional_entropy(referent)
+        entropy = self.conditional_entropy()
 
         #if H > entropy_threshold & order < order_threshold
-        interpretation(self.lexicon, self.order + 1, self.signal, self.order_threshold)
+        if (entropy > self.entropy_threshold) and (self.order < self.order_threshold):
+            self.order += 1
+            self.interpretation_pragmatic()
 
         # if H < entropy_threshold or when order = order_threshold --> recursion till order=0
         #save when order_threshold is reached!
         #interpretation(dialogue_history, lexicon, order, signal) --> call function!
+        if (entropy <= self.entropy_threshold) or (self.order == self.order_threshold):
+
+            prob_lex = np.zeros(np.size(self.lexicon, 1))
+            for referent_index in range(np.size(self.lexicon, 1)):
+                prob_lex[referent_index] = self.prob_referent_signal(self.order, referent_index, self.signal)
+
+            max_prob_referent = np.amax(prob_lex, axis=1)
+            indices = np.where(prob_lex == max_prob_referent)
+            referent = int(np.random.choice(indices[0], 1, replace=False))
+
+            if self.order == self.order_threshold:
+                order_threshold_reached = 1
 
         return referent, order_threshold_reached
 
-    def conditional_entropy(self, referent):
+    def conditional_entropy(self):
         """
         Calculate the conditional entropy over the posterior distribution of the referents given the signal, lexicon and
         dialogue history if not empty.
@@ -216,9 +236,12 @@ class Interpretation:
         # times
         # log (1/prob as described above)
 
+        sum_ref_prob = 0.0
+        for referent_index in range(np.size(self.lexicon, 1)):
+            prob = self.prob_referent_signal(self.order, referent_index, self.signal)
+            sum_ref_prob += (prob * math.log10(1/prob))
 
-
-        return entropy
+        return sum_ref_prob
 
     def conjunction(self):
         """
@@ -257,6 +280,40 @@ class Interpretation:
             index_signal += 1
 
         return prob_lex
+
+    def prob_referent_signal(self, order, referent_index, signal_index):
+        """
+        Calculate the probability of the referent given the signal: probability of the signal given r (speaker: same
+        order of pragmatic reasoning) divided by the sum of the (speaker) probabilities of the signal given all
+        referents. If n = 0, calculate the literal probability.
+        :return: float; the probability of the referent given the signal.
+        """
+        if order == 0:
+            prob_lex = self.prob_literal()
+            max_prob_referent = np.amax(prob_lex, axis=1)[signal_index]
+            indices = np.where(prob_lex[signal_index] == max_prob_referent)
+            referent = int(np.random.choice(indices[0], 1, replace=False))
+            return max_prob_referent, referent
+        else:
+            sum_prob_signal = 0.0
+            for referent_index_set in range(np.size(self.lexicon, 1)):
+                sum_prob_signal += self.prob_speaker_signal_referent(order, referent_index_set, signal_index)
+
+            return self.prob_speaker_signal_referent(order, referent_index, signal_index)/sum_prob_signal
+
+    def prob_speaker_signal_referent(self, order, referent_index, signal_index):
+        """
+        Calculate the probability of the signal given the referent (reasoning about the speaker): probability of the
+        referent given the signal (listener n-1) divided by the sum of the probabilities of the referent given all
+        signals.
+        :return: float; the probability of the signal given the referent.
+        """
+
+        sum_prob_referent = 0.0
+        for signal_index_set in range(np.size(self.lexicon, 0)):
+            sum_prob_referent += self.prob_referent_signal(order - 1, referent_index, signal_index_set)
+
+        return self.prob_referent_signal(order - 1, referent_index, signal_index) / sum_prob_referent
 
 
 # ------------------------------------------------- Part 2: Simulation -------------------------------------------------
@@ -378,6 +435,8 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, e
     #Run the desired number of interactions for the simulation and store the results in the pandas dataframe
     for i in range(n_interactions):
         result = interaction(speaker, listener, lexicons[i])
-        results.loc[len(results)] = np.concatenate((result, np.array([ambiguity_level, n_signals, n_referents]), axis=None)
+        results.loc[len(results)] = np.concatenate((result, np.array([ambiguity_level, n_signals, n_referents])), axis=None)
 
     return results
+
+simulation(1, 0.5, 10, 8, 0, 1)
