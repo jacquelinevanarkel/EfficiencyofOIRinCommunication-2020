@@ -63,7 +63,14 @@ class Production:
         :return: int; signal
         """
 
-        #calculate which signal signal maximizes the probability --> call function
+        #calculate which signal signal maximizes the probability
+        prob_lex = np.zeros(np.size(self.lexicon, 0))
+        for signal_index in range(np.size(self.lexicon, 0)):
+            prob_lex[signal_index] = self.prob_signal_referent(self.order, self.intention, signal_index)
+
+        max_prob_signal = np.amax(prob_lex, axis=0)
+        indices = np.where(prob_lex == max_prob_signal)
+        signal = int(np.random.choice(indices[0], 1, replace=False))
 
         return signal
 
@@ -108,6 +115,49 @@ class Production:
             index_referent += 1
 
         return prob_lex
+
+    def prob_signal_referent(self, order, referent_index, signal_index):
+        """
+        Calculate the probability of the signal given the referent: probability of the referent given the signal
+        (listener: same order of pragmatic reasoning) divided by the sum of the (listener) probabilities of the referent
+        given all signals. If n = 0, calculate the literal probability.
+        :param order: int; the order of pragmatic reasoning of the speaker
+        :param referent_index: int; the index of the referent in the lexicon
+        :param signal_index: int; the index of the signal in the lexicon
+        :return: float; the probability of the signal given the referent
+        """
+
+        #When the order is 0, the literal probability is calculated
+        if order == 0:
+            prob_lex = self.prob_literal()
+            max_prob_signal = np.amax(prob_lex, axis=1)[referent_index]
+            indices = np.where(prob_lex[][referent_index] == max_prob_signal)
+            signal = int(np.random.choice(indices[0], 1, replace=False))
+            return max_prob_signal, signal
+        #When the order is not 0, the pragmatic probabilities are calculated
+        else:
+            sum_prob_referent = 0.0
+            for signal_index_set in range(np.size(self.lexicon, 0)):
+                sum_prob_referent += self.prob_listener_referent_signal(order, referent_index, signal_index_set)
+
+            return self.prob_listener_referent_signal(order, referent_index, signal_index)/sum_prob_referent
+
+    def prob_listener_referent_signal(self, order, referent_index, signal_index):
+        """
+        Calculate the probability of the referent given the signal (reasoning about the listener): probability of the
+        signal given the referent (speaker n-1) divided by the sum of the probabilities of the signal given all
+        referents.
+        :param order: int; the order of pragmatic reasoning of the speaker
+        :param referent_index: int; the index of the referent in the lexicon
+        :param signal_index: int; the index of the signal in the lexicon
+        :return: float; the probability of the referent given the signal
+        """
+
+        sum_prob_signal = 0.0
+        for referent_index_set in range(np.size(self.lexicon, 1)):
+            sum_prob_signal += self.prob_signal_referent(order - 1, referent_index_set, signal_index)
+
+        return self.prob_signal_referent(order - 1, referent_index, signal_index) / sum_prob_signal
 
 # /////////////////////////////////////////////////// Interpretation ///////////////////////////////////////////////////
 class Interpretation:
@@ -228,14 +278,11 @@ class Interpretation:
         """
         Calculate the conditional entropy over the posterior distribution of the referents given the signal, lexicon and
         dialogue history if not empty.
-        :param referent: int; inferred referent
-        :return: int; the entropy of the inferred referent
+        :return: int; the entropy of the posterior distribution
         """
-        #sum of:
-        # pragmatic/literal probability of r given the signal and the lexicon(or dialogue history)
-        # times
-        # log (1/prob as described above)
 
+        #Take the sum of: the probability of the referent given the signal and the lexicon times the log of 1 divided by
+        #the probability of the referent given the signal and the lexicon
         sum_ref_prob = 0.0
         for referent_index in range(np.size(self.lexicon, 1)):
             prob = self.prob_referent_signal(self.order, referent_index, self.signal)
@@ -286,14 +333,20 @@ class Interpretation:
         Calculate the probability of the referent given the signal: probability of the signal given r (speaker: same
         order of pragmatic reasoning) divided by the sum of the (speaker) probabilities of the signal given all
         referents. If n = 0, calculate the literal probability.
+        :param order: int; order of pragmatic reasoning of the listener
+        :param referent_index: int; the index of the referent in the lexicon
+        :param signal_index: int; the index of the signal in the lexicon
         :return: float; the probability of the referent given the signal.
         """
+
+        #When the order is 0, the literal probability is calculated
         if order == 0:
             prob_lex = self.prob_literal()
             max_prob_referent = np.amax(prob_lex, axis=1)[signal_index]
             indices = np.where(prob_lex[signal_index] == max_prob_referent)
             referent = int(np.random.choice(indices[0], 1, replace=False))
             return max_prob_referent, referent
+        #When the order is not 0, the pragmatic probabilities are calculated
         else:
             sum_prob_signal = 0.0
             for referent_index_set in range(np.size(self.lexicon, 1)):
@@ -306,6 +359,9 @@ class Interpretation:
         Calculate the probability of the signal given the referent (reasoning about the speaker): probability of the
         referent given the signal (listener n-1) divided by the sum of the probabilities of the referent given all
         signals.
+        :param order: int; the order of pragmatic reasoning of the listener
+        :param referent_index: int; the index of the referent in the lexicon
+        :param signal_index: int; the index of the signal in the lexicon
         :return: float; the probability of the signal given the referent.
         """
 
@@ -389,6 +445,8 @@ def communicative_success(intention, referent):
 def average_com_suc(interactions):
     """
     Calculate the average communicative success: average of communicative success over all interactions.
+    :param interactions: array; every row represents an interaction with the intention of the speaker and the inferred
+    referent from the listener
     :return: float; average communicative success
     """
 
