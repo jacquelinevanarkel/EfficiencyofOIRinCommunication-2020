@@ -8,7 +8,7 @@ import math
 # ///////////////////////////////////////////////////// Production /////////////////////////////////////////////////////
 class Production:
 
-    def __init__(self, lexicon, intention, order, dialogue_history=None):
+    def __init__(self, lexicon, intention, order, dialogue_history):
         """
         Initialization of class.
         :param lexicon: array; the lexicon used by the speaker
@@ -41,19 +41,15 @@ class Production:
         """
 
         #Perform conjunction if a dialogue history is available: the lexicon changes accordingly for this interaction
-        if self.dialogue_history is not None:
+        if self.dialogue_history:
             self.lexicon = self.conjunction()
 
         #Calculate which signal maximizes the probability, given the intention
-        prob_lex = self.prob_literal()
-        max_signal = np.amax(prob_lex, axis=0)[self.intention]
-        indices = np.where(np.transpose(prob_lex)[self.intention] == max_signal)
+        norm_lex = self.normalise_lexicon()
+        max_signal = np.amax(norm_lex, axis=0)[self.intention]
+        indices = np.where(np.transpose(norm_lex)[self.intention] == max_signal)
         signal = int(np.random.choice(indices[0], 1, replace=False))
 
-        #Update dialogue history with just chosen signal
-        if self.dialogue_history is None:
-            self.dialogue_history = []
-        self.dialogue_history = self.dialogue_history.append(signal)
         return int(signal)
 
     def production_pragmatic(self):
@@ -70,7 +66,7 @@ class Production:
 
         max_prob_signal = np.amax(prob_lex, axis=0)
         indices = np.where(prob_lex == max_prob_signal)
-        signal = int(np.random.choice(indices[0], 1, replace=False))
+        signal = int(np.random.choice(indices[0], 1))
 
         return signal
 
@@ -87,34 +83,24 @@ class Production:
         #Perform conjunction on last produced signal and the lexicon
         for signal in self.lexicon:
             index_referent = 0
-            for ref, ref2 in zip(self.dialogue_history[:-1], signal):
-                if ref == 1 & ref2 == 1:
+            for ref, ref2 in zip(self.lexicon[self.dialogue_history[-1]], signal):
+                if ref == 1 and ref2 == 1:
                     new_lexicon[index_signal, index_referent] = 1
                 index_referent += 1
             index_signal +=1
 
         return new_lexicon
 
-    def prob_literal(self):
+    def normalise_lexicon(self):
         """
         Calculate the probabilities of the signals given the referents to create a lexicon filled with probabilities.
         :return: array; lexicon with probabilities of signals given referents
         """
 
-        #Initialize new lexicon for probabilities
-        prob_lex = np.zeros(self.lexicon.shape)
+        prob_lex_production = np.divide(self.lexicon, np.sum(self.lexicon, axis=0), out=np.zeros_like(self.lexicon),
+                                        where=np.sum(self.lexicon, axis=0)!=0)
 
-        #Calculate the probabilities for every signal given the referent
-        index_referent = 0
-        for referent in np.transpose(self.lexicon):
-            sum_signal_prob = np.sum(referent)
-            index_signal = 0
-            for signal in referent:
-                prob_lex[index_signal][index_referent] = float(signal)/float(sum_signal_prob)
-                index_signal += 1
-            index_referent += 1
-
-        return prob_lex
+        return prob_lex_production
 
     def prob_signal_referent(self, order, referent_index, signal_index):
         """
@@ -129,9 +115,9 @@ class Production:
 
         #When the order is 0, the literal probability is calculated
         if order == 0:
-            prob_lex = self.prob_literal()
-            max_prob_signal = np.amax(prob_lex, axis=1)[referent_index]
-            indices = np.where(prob_lex[][referent_index] == max_prob_signal)
+            norm_lex = self.normalise_lexicon()
+            max_prob_signal = np.amax(norm_lex, axis=1)[referent_index]
+            indices = np.where(norm_lex[:][referent_index] == max_prob_signal)
             signal = int(np.random.choice(indices[0], 1, replace=False))
             return max_prob_signal, signal
         #When the order is not 0, the pragmatic probabilities are calculated
@@ -162,7 +148,7 @@ class Production:
 # /////////////////////////////////////////////////// Interpretation ///////////////////////////////////////////////////
 class Interpretation:
 
-    def __init__(self, lexicon, signal, order, entropy_threshold, order_threshold = 2, dialogue_history=None):
+    def __init__(self, lexicon, signal, order, entropy_threshold, dialogue_history, order_threshold = 2):
         """
         Initialization of class.
         :param lexicon: array; the lexicon used by the listener
@@ -207,14 +193,14 @@ class Interpretation:
 
         #Perform conjunction if a dialogue history is available, returning a combined signal (from previous signal +
         # current signal)
-        if self.dialogue_history is not None:
+        if self.dialogue_history:
             self.lexicon[self.signal] = self.conjunction()
 
         #Calculate posterior distribution given the signal, lexicon, and dialogue history if not empty
-        prob_lex = self.prob_literal()
-        max_referent = np.amax(prob_lex, axis=1)[self.signal]
-        indices = np.where(prob_lex[self.signal] == max_referent)
-        referent = int(np.random.choice(indices[0], 1, replace=False))
+        norm_lex = self.normalise_lexicon()
+        max_referent = np.amax(norm_lex, axis=1)[self.signal]
+        indices = np.where(norm_lex[self.signal] == max_referent)
+        referent = int(np.random.choice(indices[0], 1))
 
         #Calculate conditional entropy of posterior distribution
         entropy = self.conditional_entropy()
@@ -286,7 +272,7 @@ class Interpretation:
         sum_ref_prob = 0.0
         for referent_index in range(np.size(self.lexicon, 1)):
             prob = self.prob_referent_signal(self.order, referent_index, self.signal)
-            sum_ref_prob += (prob * math.log10(1/prob))
+            sum_ref_prob += prob[0] * math.log((1/prob[0]),2)
 
         return sum_ref_prob
 
@@ -301,32 +287,24 @@ class Interpretation:
 
         #Perform the conjunction between the current and previous signal (from the dialogue history)
         index = 0
-        for ref, ref2 in zip(self.dialogue_history[:-1], self.signal):
-            if ref == 1 & ref2 ==1:
+
+        for ref, ref2 in zip(self.lexicon[self.dialogue_history[-1]], self.lexicon[self.signal]):
+            if ref == 1 and ref2 ==1:
                 combined_signal[index] = 1
             index += 1
+
         return combined_signal
 
-    def prob_literal(self):
+    def normalise_lexicon(self):
         """
         Calculate the probabilities of the referents given the signal to create a lexicon filled with probabilities.
         :return: array; lexicon with probabilities of referents given the signal
         """
 
-        #Initialize new lexicon for probabilities
-        prob_lex = np.zeros(self.lexicon.shape)
+        prob_lex_interpretation = np.transpose(np.divide(np.transpose(self.lexicon), np.sum(self.lexicon, axis=1),
+                                               out=np.zeros_like(np.transpose(self.lexicon)), where=np.sum(self.lexicon, axis=1)!=0))
 
-        #Calculate the probabilities for every referent given the signal
-        index_signal = 0
-        for signal in self.lexicon:
-            sum_signal_prob = np.sum(signal)
-            index_referent = 0
-            for referent in signal:
-                prob_lex[index_signal][index_referent] = float(referent)/float(sum_signal_prob)
-                index_referent += 1
-            index_signal += 1
-
-        return prob_lex
+        return prob_lex_interpretation
 
     def prob_referent_signal(self, order, referent_index, signal_index):
         """
@@ -341,9 +319,9 @@ class Interpretation:
 
         #When the order is 0, the literal probability is calculated
         if order == 0:
-            prob_lex = self.prob_literal()
-            max_prob_referent = np.amax(prob_lex, axis=1)[signal_index]
-            indices = np.where(prob_lex[signal_index] == max_prob_referent)
+            norm_lex = self.normalise_lexicon()
+            max_prob_referent = np.amax(norm_lex, axis=1)[signal_index]
+            indices = np.where(norm_lex[signal_index] == max_prob_referent)
             referent = int(np.random.choice(indices[0], 1, replace=False))
             return max_prob_referent, referent
         #When the order is not 0, the pragmatic probabilities are calculated
@@ -400,25 +378,30 @@ def interaction(speaker, listener, lexicon):
     referent by the listener, the amount of turns, the order of speaker and listener (assumed to be equal), the
     communicative success and whether the threshold of the order of pragmatic reasoning was reached
     """
-    #Initialize the amount of turns
+    #Initialize the amount of turns and the dialogue history
     turns = 0
+    dialogue_history = []
 
     #Generate intention: randomly generated from uniform distribution
     n_referents = lexicon.shape[1]
-    intention = np.random.randint(n_referents + 1)
+    intention = np.random.randint(n_referents)
 
     #Start interaction by the speaker producing a signal and the listener interpreting that signal, if (and as long as)
     #the listener signals other-initiated repair (OIR), the speaker and listener will continue the interaction by
     #producing and interpreting new signals.
-    produced_signal = Production(lexicon, intention, speaker.order).produce()
+    produced_signal = Production(lexicon, intention, speaker.order, dialogue_history).produce()
     turns += 1
-    listener_output, n_t_reached = Interpretation(lexicon, produced_signal, listener.order, listener.entropy_threshold).interpret()
+    listener_output, order_threshold_reached = Interpretation(lexicon, produced_signal, listener.order, listener.entropy_threshold, dialogue_history).interpret()
+    dialogue_history.append(produced_signal)
     turns += 1
     while listener_output == "OIR":
-        produced_signal = Production(lexicon, intention, speaker.order).produce()
+        produced_signal = Production(lexicon, intention, speaker.order, dialogue_history).produce()
         turns += 1
-        listener_output, n_t_reached = Interpretation(lexicon, produced_signal, listener.order, listener.entropy_threshold).interpret()
+        listener_output, order_threshold_reached = Interpretation(lexicon, produced_signal, listener.order, listener.entropy_threshold, dialogue_history).interpret()
+        dialogue_history.append(produced_signal)
         turns += 1
+        if turns > 100:
+            break
 
     #Save the wanted information in an array to be returned
     #QUESTION: DO WE WANT TO SAVE THE IN BETWEEN SIGNALS (all the produced signals in a conversation)? --> yes
@@ -495,6 +478,7 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, e
         result = interaction(speaker, listener, lexicons[i])
         results.loc[len(results)] = np.concatenate((result, np.array([ambiguity_level, n_signals, n_referents])), axis=None)
 
+    print(results)
     return results
 
-simulation(1, 0.5, 10, 8, 0, 1)
+simulation(10, 0.5, 10, 8, 0, 2.5)
