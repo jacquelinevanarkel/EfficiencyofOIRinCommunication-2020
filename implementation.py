@@ -22,6 +22,7 @@ class Production:
         self.order = order
         self.dialogue_history = dialogue_history
 
+        # Initialize a variable norm_lex to store the normalised lexicon in
         self.norm_lex = self.normalise_lexicon()
 
     def produce(self):
@@ -42,11 +43,11 @@ class Production:
         :return: int; signal
         """
 
-        #Perform conjunction if a dialogue history is available: the lexicon changes accordingly for this interaction
+        # Perform conjunction if a dialogue history is available: the lexicon changes accordingly for this interaction
         if self.dialogue_history:
             self.lexicon = self.conjunction()
 
-        #Calculate which signal maximizes the probability, given the intention
+        # Calculate which signal maximizes the probability, given the intention
         norm_lex = self.normalise_lexicon()
         max_signal = np.amax(norm_lex, axis=0)[self.intention]
         indices = np.where(np.transpose(norm_lex)[self.intention] == max_signal)
@@ -61,7 +62,7 @@ class Production:
         :return: int; signal
         """
 
-        #calculate which signal maximizes the probability
+        # Calculate which signal maximizes the probability
         prob_lex = np.zeros(np.size(self.lexicon, 0))
         for signal_index in range(np.size(self.lexicon, 0)):
             prob_lex[signal_index] = self.prob_signal_referent(self.order, self.intention, signal_index)
@@ -78,11 +79,11 @@ class Production:
         :return: array; new lexicon based on the conjunction
         """
 
-        #Initialize new lexicon
+        # Initialize new lexicon
         new_lexicon = np.zeros(self.lexicon.shape)
         index_signal = 0
 
-        #Perform conjunction on last produced signal and the lexicon
+        # Perform conjunction on last produced signal and the lexicon
         for signal in self.lexicon:
             index_referent = 0
             for ref, ref2 in zip(self.lexicon[self.dialogue_history[-1]], signal):
@@ -115,10 +116,10 @@ class Production:
         :return: float; the probability of the signal given the referent
         """
 
-        #When the order is 0, the literal probability is calculated
+        # When the order is 0, the literal probability is calculated
         if order == 0:
             return self.norm_lex[signal_index][referent_index]
-        #When the order is not 0, the pragmatic probabilities are calculated
+        # When the order is not 0, the pragmatic probabilities are calculated
         else:
             sum_prob_referent = 0.0
             for signal_index_set in range(np.size(self.lexicon, 0)):
@@ -164,6 +165,8 @@ class Interpretation:
         self.dialogue_history = dialogue_history
         self.entropy_threshold = entropy_threshold
 
+        # Initialize a variable norm_lex to store the normalised lexicon in
+        # and a variable max_ent to store the maximum entropy for the lexicon size
         self.norm_lex = self.normalise_lexicon()
         self.max_ent = 0
 
@@ -192,27 +195,25 @@ class Interpretation:
         (meaning that the threshold of the order of pragmatic reasoning was not reached)
         """
 
-        #Perform conjunction if a dialogue history is available, returning a combined signal (from previous signal +
+        # Perform conjunction if a dialogue history is available, returning a combined signal (from previous signal +
         # current signal)
         if self.dialogue_history:
             self.lexicon[self.signal] = self.conjunction()
             self.norm_lex = self.normalise_lexicon()
 
-        #Calculate posterior distribution given the signal, lexicon, and dialogue history if not empty
+        # Calculate posterior distribution given the signal, lexicon, and dialogue history if not empty
         max_referent = np.amax(self.norm_lex, axis=1)[self.signal]
         indices = np.where(self.norm_lex[self.signal] == max_referent)
         referent = int(np.random.choice(indices[0], 1))
 
-        #Calculate conditional entropy of posterior distribution
+        # Calculate conditional entropy of posterior distribution
         entropy = self.conditional_entropy()
 
-        # when H < entropy_threshold: output inferred referent
-        # output = referent --> call function
+        # When the entropy <= entropy_threshold return the referent
         if entropy <= self.entropy_threshold:
             output = referent
 
-        # when H > entropy_threshold:
-        # turn to speaker --> output = OIR
+        # When the entropy > entropy_threshold return an OIR signal
         if entropy > self.entropy_threshold:
             output = "OIR"
 
@@ -229,22 +230,20 @@ class Interpretation:
         (Boolean)
         """
 
-        #Initialize the variable for whether the threshold of the order of pragmatic reasoning is reached
+        # Initialize the variable for whether the threshold of the order of pragmatic reasoning is reached
         order_threshold_reached = 0
 
-        #Calculate posterior distribution given signal and lexicon
-
-        #Calculate the conditional entropy of posterior distribution
+        # Calculate the conditional entropy of the posterior distribution
         entropy = self.conditional_entropy()
 
-        #if H > entropy_threshold & order < order_threshold
+        # If the entropy > entropy_threshold and the order of pragmatic reasoning is smaller than its threshold
+        # interpret the signal again with one level up on pragmatic reasoning
         if (entropy > self.entropy_threshold) and (self.order < self.order_threshold):
             self.order += 1
             self.interpretation_pragmatic()
 
-        # if H < entropy_threshold or when order = order_threshold --> recursion till order=0
-        #save when order_threshold is reached!
-        #interpretation(dialogue_history, lexicon, order, signal) --> call function!
+        # If the entropy <= than the entropy threshold or when the order of pragmatic reasoning is equal to its
+        # threshold, the referent with the highest probability given the signal is calculated and outputted
         if (entropy <= self.entropy_threshold) or (self.order == self.order_threshold):
             prob_lex = np.zeros(np.size(self.lexicon, 1))
             for referent_index in range(np.size(self.lexicon, 1)):
@@ -266,8 +265,8 @@ class Interpretation:
         :return: int; the entropy of the posterior distribution
         """
 
-        #Take the sum of: the probability of the referent given the signal and the lexicon times the log of 1 divided by
-        #the probability of the referent given the signal and the lexicon
+        # Take the sum of: the probability of the referent given the signal and the lexicon times the log of 1 divided
+        # by the probability of the referent given the signal and the lexicon
         sum_ref_prob = 0.0
         for referent_index in range(np.size(self.lexicon, 1)):
             prob_max_ent = 1/(np.size(self.lexicon, 1))
@@ -284,10 +283,10 @@ class Interpretation:
         :return: array; the conjunction of both signals into a combined signal
         """
 
-        #Initialize an array to store the combined signal in
+        # Initialize an array to store the combined signal in
         combined_signal = np.zeros(self.lexicon.shape[1])
 
-        #Perform the conjunction between the current and previous signal (from the dialogue history)
+        # Perform the conjunction between the current and previous signal (from the dialogue history)
         index = 0
 
         for ref, ref2 in zip(self.lexicon[self.dialogue_history[-1]], self.lexicon[self.signal]):
@@ -319,10 +318,10 @@ class Interpretation:
         :return: float; the probability of the referent given the signal.
         """
 
-        #When the order is 0, the literal probability is calculated
+        # When the order is 0, the literal probability is calculated
         if order == 0:
             return self.norm_lex[signal_index][referent_index]
-        #When the order is not 0, the pragmatic probabilities are calculated
+        # When the order is not 0, the pragmatic probabilities are calculated
         else:
             sum_prob_signal = 0.0
             for referent_index_set in range(np.size(self.lexicon, 1)):
@@ -352,7 +351,8 @@ class Interpretation:
 # ------------------------------------------------- Part 2: Simulation -------------------------------------------------
 #                                            Simulate a Single Conversation
 
-#Initializing Agents: order of pragmatic reasoning, ambiguity level lexicon, type (listener, speaker), optional: entropy threshold
+# Initializing Agents: order of pragmatic reasoning, ambiguity level lexicon, type (listener, speaker),
+# optional: entropy threshold
 class Agent:
 
     def __init__(self, order, agent_type, entropy_threshold):
@@ -377,17 +377,17 @@ def interaction(speaker, listener, lexicon):
     referent by the listener, the amount of turns, the order of speaker and listener (assumed to be equal), the
     communicative success and whether the threshold of the order of pragmatic reasoning was reached
     """
-    #Initialize the amount of turns and the dialogue history
+    # Initialize the amount of turns and the dialogue history
     turns = 0
     dialogue_history = []
 
-    #Generate intention: randomly generated from uniform distribution
+    # Generate intention: randomly generated from uniform distribution
     n_referents = lexicon.shape[1]
     intention = np.random.randint(n_referents)
 
-    #Start interaction by the speaker producing a signal and the listener interpreting that signal, if (and as long as)
-    #the listener signals other-initiated repair (OIR), the speaker and listener will continue the interaction by
-    #producing and interpreting new signals.
+    # Start interaction by the speaker producing a signal and the listener interpreting that signal, if (and as long as)
+    # the listener signals other-initiated repair (OIR), the speaker and listener will continue the interaction by
+    # producing and interpreting new signals
     produced_signal = Production(lexicon, intention, speaker.order, dialogue_history).produce()
     turns += 1
     listener_output, order_threshold_reached, max_entropy = Interpretation(lexicon, produced_signal, listener.order, listener.entropy_threshold, dialogue_history, order_threshold=3).interpret()
@@ -402,8 +402,8 @@ def interaction(speaker, listener, lexicon):
         if turns > 100:
             break
 
-    #Save the wanted information in an array to be returned
-    #QUESTION: DO WE WANT TO SAVE THE IN BETWEEN SIGNALS (all the produced signals in a conversation)? --> yes
+    # Save the wanted information in an array to be returned
+    # QUESTION: DO WE WANT TO SAVE THE IN BETWEEN SIGNALS (all the produced signals in a conversation)? --> yes
     output = np.array([intention, listener_output, turns, speaker.order, communicative_success(intention, listener_output),
                        order_threshold_reached])
 
@@ -439,10 +439,10 @@ def average_com_suc(interactions):
 
     return sum / len(interactions)
 
-#Complexity: also a measurement, but not included here
+# Complexity: also a measurement, but not included here
 
 # //////////////////////////////////////////////// Running Simulations ////////////////////////////////////////////////
-#Think about multiprocessing
+# Think about multiprocessing
 def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, entropy_threshold):
     """
     Run a simulation of a number of interactions (n_interactions), with the specified parameters.
@@ -457,23 +457,23 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, e
     threshold of the order of pragmatic reasoning was reached, the ambiguity level, the number of signals, the number
     of referents
     """
-    #Initialize agents with the order of pragmatic reasoning, agent type, and entropy threshold
+    # Initialize agents with the order of pragmatic reasoning, agent type, and entropy threshold
     speaker = Agent(order, "Speaker", entropy_threshold)
     listener = Agent(order, "Listener", entropy_threshold)
 
-    #Generate Lexicons with the number of signals, the number of referents, the ambiguity level and the number of
-    #lexicons
+    # Generate Lexicons with the number of signals, the number of referents, the ambiguity level and the number of
+    # lexicons
     lexicons_df = pd.read_json('lexiconset.json')
     n_lexicons = n_interactions
     lexicons = lex_retriever.retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicons)
 
-    #Initliaze pandas dataframe to store results
+    # Initliaze pandas dataframe to store results
     results = pd.DataFrame(
         columns=["Intention Speaker", "Inferred Referent Listener", "Number of Turns", "Order of Reasoning",
                  "Communicative Success", "Reached Threshold Order", "Ambiguity Level", "Number of Signals",
                  "Number of referents"])
 
-    #Run the desired number of interactions for the simulation and store the results in the pandas dataframe
+    # Run the desired number of interactions for the simulation and store the results in the pandas dataframe
     for i in range(n_interactions):
         result, max_entropy = interaction(speaker, listener, lexicons[i])
         results.loc[len(results)] = np.concatenate((result, np.array([ambiguity_level, n_signals, n_referents])), axis=None)
@@ -482,4 +482,4 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, e
     print(results)
     return results
 
-simulation(10, 0.5, 10, 8, 0, 1)
+simulation(5, 0.5, 10, 8, 2, 1)
