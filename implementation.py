@@ -330,7 +330,7 @@ def interaction(speaker, listener, lexicon):
             break
 
     # Save the wanted information in an array to be returned
-    # QUESTION: DO WE WANT TO SAVE THE IN BETWEEN SIGNALS (all the produced signals in a conversation)? --> yes
+    # TODO Save all produced signals as well (in one conversation)
     output = np.array(
         [intention, listener_output, turns, speaker.order, communicative_success(intention, listener_output),
          order_threshold_reached])
