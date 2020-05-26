@@ -67,7 +67,8 @@ class Production:
         probs_reasoning_interpretation = np.divide(self.norm_lex.T, np.sum(self.norm_lex, axis=1)).T
         probs_pragmatic = np.divide(probs_reasoning_interpretation, np.sum(probs_reasoning_interpretation, axis=0))
         if self.order == 2:
-            probs_pragmatic = np.divide(probs_pragmatic, np.sum(probs_pragmatic, axis=0))
+            probs_reasoning_interpretation = np.divide(probs_pragmatic.T, np.sum(probs_pragmatic, axis=1)).T
+            probs_pragmatic = np.divide(probs_reasoning_interpretation, np.sum(probs_reasoning_interpretation, axis=0))
 
         max_prob_signal = np.amax(probs_pragmatic[self.intention])
         indices = np.where(probs_pragmatic[self.intention] == max_prob_signal)
@@ -201,7 +202,8 @@ class Interpretation:
         probs_reasoning_production = np.divide(self.norm_lex, np.sum(self.norm_lex, axis=0))
         probs_pragmatic = np.divide(probs_reasoning_production.T, np.sum(probs_reasoning_production, axis=1)).T
         if self.order == 2:
-            probs_pragmatic = np.divide(probs_pragmatic.T, np.sum(probs_pragmatic, axis=1)).T
+            probs_reasoning_production = np.divide(probs_pragmatic, np.sum(probs_pragmatic, axis = 0))
+            probs_pragmatic = np.divide(probs_reasoning_production.T, np.sum(probs_reasoning_production, axis=1)).T
 
         # Calculate the conditional entropy of the posterior distribution
         entropy = self.conditional_entropy(probs_pragmatic)
@@ -330,6 +332,7 @@ def interaction(speaker, listener, lexicon):
                                                                                dialogue_history).interpret()
         dialogue_history.append(produced_signal)
         turns += 1
+        # To avoid infinite loops
         if turns > 100:
             break
 
