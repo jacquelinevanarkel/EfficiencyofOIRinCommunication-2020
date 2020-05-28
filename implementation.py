@@ -3,6 +3,9 @@ import pandas as pd
 import numpy as np
 import lexicon_retriever as lex_retriever
 import math
+import pickle
+import multiprocessing
+from functools import partial
 
 
 # --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
@@ -25,6 +28,10 @@ class Production:
 
         # Initialize a variable norm_lex to store the normalised lexicon in
         self.norm_lex = self.normalise_lexicon()
+
+        # Pragmatic agents always start with the highest order
+        if self.order == 1:
+            self.order = 2
 
     def produce(self):
         """
@@ -127,9 +134,7 @@ class Interpretation:
         self.entropy_threshold = entropy_threshold
 
         # Initialize a variable norm_lex to store the normalised lexicon in
-        # and a variable max_ent to store the maximum entropy for the lexicon size
         self.norm_lex = self.normalise_lexicon()
-        self.max_ent = 0
 
     def interpret(self):
         """
@@ -141,10 +146,10 @@ class Interpretation:
 
         if self.order == 0:
             output, order_threshold_reached = self.interpretation_literal()
-            return output, order_threshold_reached, self.max_ent
+            return output, order_threshold_reached
         else:
             output, order_threshold_reached = self.interpretation_pragmatic()
-            return output, order_threshold_reached, self.max_ent
+            return output, order_threshold_reached
 
     def interpretation_literal(self):
         """
@@ -228,9 +233,6 @@ class Interpretation:
         conditional_entropy = 0.0
         for referent_index in range(np.size(self.lexicon, 1)):
             prob = probs_pragmatic[self.signal][referent_index]
-            # Calculate the maximum entropy as well
-            prob_max_ent = 1 / (np.size(self.lexicon, 1))
-            self.max_ent += prob_max_ent * math.log((1 / prob_max_ent), 2)
             if prob != 0:
                 conditional_entropy += prob * math.log((1 / prob), 2)
 
@@ -299,8 +301,9 @@ def interaction(speaker, listener, lexicon):
     referent by the listener, the amount of turns, the order of speaker and listener (assumed to be equal), the
     communicative success and whether the threshold of the order of pragmatic reasoning was reached
     """
-    # Initialize the amount of turns and the dialogue history
+    # Initialize the amount of turns, whether the interaction threshold is reached and the dialogue history
     turns = 0
+    interaction_threshold_reached = 0
     dialogue_history = []
 
     # Generate intention: randomly generated from uniform distribution
@@ -312,30 +315,31 @@ def interaction(speaker, listener, lexicon):
     # producing and interpreting new signals
     produced_signal = Production(lexicon, intention, speaker.order, dialogue_history).produce()
     turns += 1
-    listener_output, order_threshold_reached, max_entropy = Interpretation(lexicon, produced_signal, listener.order,
+    listener_output, order_threshold_reached = Interpretation(lexicon, produced_signal, listener.order,
                                                                            listener.entropy_threshold, dialogue_history,
-                                                                           order_threshold=3).interpret()
+                                                                           order_threshold=2).interpret()
     dialogue_history.append(produced_signal)
     turns += 1
     while listener_output == "OIR":
         produced_signal = Production(lexicon, intention, speaker.order, dialogue_history).produce()
         turns += 1
-        listener_output, order_threshold_reached, max_entropy = Interpretation(lexicon, produced_signal, listener.order,
+        listener_output, order_threshold_reached = Interpretation(lexicon, produced_signal, listener.order,
                                                                                listener.entropy_threshold,
                                                                                dialogue_history).interpret()
         dialogue_history.append(produced_signal)
         turns += 1
-        # To avoid infinite loops
-        if turns > 100:
+        # To avoid infinite loops, when you reach a number of turns that is bigger than the twice the number of signals,
+        # the interaction is stopped
+        if turns >= (2 * lexicon.shape[0]):
+            interaction_threshold_reached = 1
             break
 
     # Save the wanted information in an array to be returned
-    # TODO Save all produced signals as well (in one conversation)
     output = np.array(
         [intention, listener_output, turns, speaker.order, communicative_success(intention, listener_output),
-         order_threshold_reached])
+         order_threshold_reached, interaction_threshold_reached, dialogue_history])
 
-    return output, max_entropy
+    return output
 
 
 # ///////////////////////////////////////// Measurements: dependent variables /////////////////////////////////////////
@@ -378,28 +382,52 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, e
 
     # Generate Lexicons with the number of signals, the number of referents, the ambiguity level and the number of
     # lexicons
-    lexicons_df = pd.read_json('lexiconset.json')
+    lexicons_df = pd.read_json('lexiconset3.json')
     n_lexicons = n_interactions
     lexicons = lex_retriever.retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicons)
 
-    # Initliaze pandas dataframe to store results
+    # Initialize pandas dataframe to store results
     results = pd.DataFrame(
         columns=["Intention Speaker", "Inferred Referent Listener", "Number of Turns", "Order of Reasoning",
-                 "Communicative Success", "Reached Threshold Order", "Ambiguity Level", "Number of Signals",
-                 "Number of Referents", "Entropy Threshold"])
+                 "Communicative Success", "Reached Threshold Order", "Reached Threshold Interaction",
+                 "Dialogue History", "Ambiguity Level", "Number of Signals", "Number of Referents", "Entropy Threshold"])
 
     # Run the desired number of interactions for the simulation and store the results in the pandas dataframe
-    for i in range(n_interactions):
-        result, max_entropy = interaction(speaker, listener, lexicons[i])
-        results.loc[len(results)] = np.concatenate((result, np.array([ambiguity_level, n_signals, n_referents,
-                                                                      entropy_threshold])), axis=None)
-    # TODO Finish average communicative success
-    #average_communicative_success = results.mean(axis=1)[4]
 
-    print("Maximum entropy: ", max_entropy)
+    p = multiprocessing.Pool(processes=4)
+    results = p.map(partial(interaction, speaker=speaker, listener=listener), lexicons)
     print(results)
-    #print(average_communicative_success)
+    #for i in p.map(x, lexicons):
+    #    results.loc[len(results)] = np.concatenate((i, np.array([ambiguity_level, n_signals, n_referents,
+    #                                                                       entropy_threshold])), axis=None)
+
+    # for i in range(n_interactions):
+    #     result = pd.concat(p.map(interaction, (speaker, listener, lexicons[i])))
+    #     results.loc[len(results)] = np.concatenate((result, np.array([ambiguity_level, n_signals, n_referents,
+    #                                                                   entropy_threshold])), axis=None)
+
+    # Make sure that the values are integers in order to take the mean
+    results["Reached Threshold Order"] = results["Reached Threshold Order"].astype(int)
+    results["Reached Threshold Interaction"] = results["Reached Threshold Interaction"].astype(int)
+    results["Communicative Success"] = results["Communicative Success"].astype(int)
+    results["Number of Turns"] = results["Number of Turns"].astype(int)
+
+    # Take the mean of the specified variables
+    simulation_averages = {"Reached Threshold Order": results["Reached Threshold Order"].mean(),
+                           "Reached Threshold Interaction": results["Reached Threshold Interaction"].mean(),
+                           "Communicative Success": results["Communicative Success"].mean(),
+                           "Number of Turns": results["Number of Turns"].mean()}
+
+    # Pickle the results
+    filename = 'amb' + str(ambiguity_level) + 'lex' + str(n_signals) + '_' + str(n_referents) + 'order' + str(order) +\
+               'ent' + str(entropy_threshold)
+    outfile = open(filename, 'wb')
+    pickle.dump(results, outfile)
+    outfile.close()
+
+    print(simulation_averages)
+
     return results
 
 
-simulation(10, 0.5, 10, 8, 0, 1)
+simulation(20, 0.5, 6, 4, 0, 0.8)
