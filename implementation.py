@@ -7,7 +7,6 @@ import pickle
 import multiprocessing
 from functools import partial
 
-
 # --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
 # ///////////////////////////////////////////////////// Production /////////////////////////////////////////////////////
 class Production:
@@ -177,7 +176,7 @@ class Interpretation:
 
         # When the entropy > entropy_threshold return an OIR signal
         if entropy > self.entropy_threshold:
-            output = "OIR"
+            output = 'OIR'
 
         return output, 0
 
@@ -320,7 +319,7 @@ def interaction(speaker, listener, lexicon):
                                                                            order_threshold=2).interpret()
     dialogue_history.append(produced_signal)
     turns += 1
-    while listener_output == "OIR":
+    while listener_output == 'OIR':
         produced_signal = Production(lexicon, intention, speaker.order, dialogue_history).produce()
         turns += 1
         listener_output, order_threshold_reached = Interpretation(lexicon, produced_signal, listener.order,
@@ -361,7 +360,6 @@ def communicative_success(intention, referent):
 # Complexity: also a measurement, but not included here
 
 # //////////////////////////////////////////////// Running Simulations ////////////////////////////////////////////////
-# TODO Think about multiprocessing
 def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, entropy_threshold):
     """
     Run a simulation of a number of interactions (n_interactions), with the specified parameters.
@@ -377,8 +375,8 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, e
     of referents
     """
     # Initialize agents with the order of pragmatic reasoning, agent type, and entropy threshold
-    speaker = Agent(order, "Speaker", entropy_threshold)
-    listener = Agent(order, "Listener", entropy_threshold)
+    speaker = Agent(order, 'Speaker', entropy_threshold)
+    listener = Agent(order, 'Listener', entropy_threshold)
 
     # Generate Lexicons with the number of signals, the number of referents, the ambiguity level and the number of
     # lexicons
@@ -388,35 +386,29 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, e
 
     # Initialize pandas dataframe to store results
     results = pd.DataFrame(
-        columns=["Intention Speaker", "Inferred Referent Listener", "Number of Turns", "Order of Reasoning",
-                 "Communicative Success", "Reached Threshold Order", "Reached Threshold Interaction",
-                 "Dialogue History", "Ambiguity Level", "Number of Signals", "Number of Referents", "Entropy Threshold"])
+        columns=['Intention Speaker', 'Inferred Referent Listener', 'Number of Turns', 'Order of Reasoning',
+                 'Communicative Success', 'Reached Threshold Order', 'Reached Threshold Interaction',
+                 'Dialogue History', 'Ambiguity Level', 'Number of Signals', 'Number of Referents', 'Entropy Threshold'])
 
-    # Run the desired number of interactions for the simulation and store the results in the pandas dataframe
-
-    p = multiprocessing.Pool(processes=4)
-    results = p.map(partial(interaction, speaker=speaker, listener=listener), lexicons)
+    # Run the desired number of interactions for the simulation and store the results in the pandas dataframe with the
+    # help of multiprocessing
+    pool = multiprocessing.Pool(processes=16)
+    for i in range(n_interactions):
+        result = pool.starmap(interaction, [(speaker, listener, lexicons[i])])
+        results.loc[len(results)] = np.concatenate((result[0], np.array([ambiguity_level, n_signals, n_referents, entropy_threshold])), axis=None)
     print(results)
-    #for i in p.map(x, lexicons):
-    #    results.loc[len(results)] = np.concatenate((i, np.array([ambiguity_level, n_signals, n_referents,
-    #                                                                       entropy_threshold])), axis=None)
-
-    # for i in range(n_interactions):
-    #     result = pd.concat(p.map(interaction, (speaker, listener, lexicons[i])))
-    #     results.loc[len(results)] = np.concatenate((result, np.array([ambiguity_level, n_signals, n_referents,
-    #                                                                   entropy_threshold])), axis=None)
 
     # Make sure that the values are integers in order to take the mean
-    results["Reached Threshold Order"] = results["Reached Threshold Order"].astype(int)
-    results["Reached Threshold Interaction"] = results["Reached Threshold Interaction"].astype(int)
-    results["Communicative Success"] = results["Communicative Success"].astype(int)
-    results["Number of Turns"] = results["Number of Turns"].astype(int)
+    results['Reached Threshold Order'] = results['Reached Threshold Order'].astype(int)
+    results['Reached Threshold Interaction'] = results['Reached Threshold Interaction'].astype(int)
+    results['Communicative Success'] = results['Communicative Success'].astype(int)
+    results['Number of Turns'] = results['Number of Turns'].astype(int)
 
     # Take the mean of the specified variables
-    simulation_averages = {"Reached Threshold Order": results["Reached Threshold Order"].mean(),
-                           "Reached Threshold Interaction": results["Reached Threshold Interaction"].mean(),
-                           "Communicative Success": results["Communicative Success"].mean(),
-                           "Number of Turns": results["Number of Turns"].mean()}
+    simulation_averages = {'Reached Threshold Order': results['Reached Threshold Order'].mean(),
+                           'Reached Threshold Interaction': results['Reached Threshold Interaction'].mean(),
+                           'Communicative Success': results['Communicative Success'].mean(),
+                           'Number of Turns': results['Number of Turns'].mean()}
 
     # Pickle the results
     filename = 'amb' + str(ambiguity_level) + 'lex' + str(n_signals) + '_' + str(n_referents) + 'order' + str(order) +\
@@ -429,5 +421,5 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, order, e
 
     return results
 
-
-simulation(20, 0.5, 6, 4, 0, 0.8)
+if __name__ == "__main__":
+    simulation(20, 0.5, 6, 4, 0, 0.8)
