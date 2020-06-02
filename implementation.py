@@ -5,7 +5,6 @@ import lexicon_retriever as lex_retriever
 import math
 import pickle
 import multiprocessing
-from functools import partial
 
 # --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
 # ///////////////////////////////////////////////////// Production /////////////////////////////////////////////////////
