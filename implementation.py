@@ -307,7 +307,6 @@ def interaction(speaker, listener, lexicon):
 
     # Generate intention: randomly generated from uniform distribution
     n_referents = lexicon.shape[1]
-    print("n_referents:", n_referents)
     intention = np.random.randint(n_referents)
 
     # Start interaction by the speaker producing a signal and the listener interpreting that signal, if (and as long as)
@@ -333,12 +332,10 @@ def interaction(speaker, listener, lexicon):
     success = communicative_success(intention, listener_output)
 
     # Save the wanted information in a pandas dataframe to be returned
-    output = pd.DataFrame([intention, listener_output, turns, speaker.order, listener.order, success,
-                                   order_threshold_reached, interaction_threshold_reached, dialogue_history],
-                          columns=['Intention Speaker', 'Inferred Referent Listener', 'Number of Turns',
-                                   'Order of Reasoning Speaker', 'Order of Reasoning Listener', 'Communicative Success',
-                                   'Reached Threshold Order', 'Reached Threshold Interaction', 'Dialogue History'])
-    print(output)
+    output = pd.DataFrame(np.array([[intention, listener_output, turns, speaker.order, listener.order,
+                                                     success, order_threshold_reached, interaction_threshold_reached,
+                                                     dialogue_history]]))
+
     return output
 
 
@@ -397,20 +394,25 @@ def simulation(ambiguity_level, n_signals, n_referents, speaker_order, listener_
 
     general_info = pd.DataFrame([ambiguity_level, n_signals, n_referents, entropy_threshold])
 
+    # n_interactions = 2 * n_referents
+    # for run in range(n_runs_simulation):
+    #     lexicon = lexicons[run]
+    #     for _ in range(n_interactions):
+    #         result = interaction(speaker, listener, lexicon)
+    #         results.loc[len(results)] = np.concatenate([result, general_info], axis=None)
+
     pool = multiprocessing.Pool()
     n_interactions = 2 * n_referents
     for _ in range(n_interactions):
-        #arguments = zip([speaker]*n_lexicons,[listener]*n_lexicons,lexicons)
-        #arg_list = list(arguments)
-        #result = pool.starmap(wrapper, arguments)
-        #speaker_list = list([speaker] * n_lexicons)
-        #listener_list = [listener] * n_lexicons
-        #result = pool.starmap(interaction, [(speaker_list[i], listener_list[i], lexicons[i]) for i in range(n_lexicons)])
-        result = pool.map(partial(interaction, speaker=speaker, listener=listener), lexicons)
-        print(result)
-        #results.loc[len(results)] = pd.concat([result[0], general_info], axis=1)
+        arguments = zip([speaker]*n_lexicons,[listener]*n_lexicons,lexicons)
+        arg_list = list(arguments)
+        result = pool.starmap(interaction, arg_list)
+        for index in range(n_runs_simulation):
+            results.loc[len(results)] = np.concatenate([result[index], general_info], axis=None)
     pool.close()
     pool.join()
+
+    print(results)
 
     # Make sure that the values are integers in order to take the mean
     results['Reached Threshold Order'] = results['Reached Threshold Order'].astype(int)
@@ -444,11 +446,3 @@ def float_to_string(float_object):
     string_new = string.replace('.', ',')
 
     return string_new
-
-def wrapper(arguments):
-    print('test')
-    speaker = arguments[0]
-    listener = arguments[1]
-    lexicon = arguments[2]
-    print(speaker, listener, lexicon)
-    return interaction(speaker, listener, lexicon)
