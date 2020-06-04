@@ -5,6 +5,7 @@ import lexicon_retriever as lex_retriever
 import math
 import pickle
 import multiprocessing
+from functools import partial
 
 # --------------------------------------------- Part 1: RSA Implementation ---------------------------------------------
 # ///////////////////////////////////////////////////// Production /////////////////////////////////////////////////////
@@ -306,6 +307,7 @@ def interaction(speaker, listener, lexicon):
 
     # Generate intention: randomly generated from uniform distribution
     n_referents = lexicon.shape[1]
+    print("n_referents:", n_referents)
     intention = np.random.randint(n_referents)
 
     # Start interaction by the speaker producing a signal and the listener interpreting that signal, if (and as long as)
@@ -398,11 +400,15 @@ def simulation(ambiguity_level, n_signals, n_referents, speaker_order, listener_
     pool = multiprocessing.Pool()
     n_interactions = 2 * n_referents
     for _ in range(n_interactions):
-        arguments = zip([speaker]*n_lexicons,[listener]*n_lexicons,lexicons)
-        arg_list = list(arguments)
-        print(arg_list[0])
-        result = pool.starmap(interaction, arg_list)
-        results.loc[len(results)] = pd.concat([result[0], general_info], axis=1)
+        #arguments = zip([speaker]*n_lexicons,[listener]*n_lexicons,lexicons)
+        #arg_list = list(arguments)
+        #result = pool.starmap(wrapper, arguments)
+        #speaker_list = list([speaker] * n_lexicons)
+        #listener_list = [listener] * n_lexicons
+        #result = pool.starmap(interaction, [(speaker_list[i], listener_list[i], lexicons[i]) for i in range(n_lexicons)])
+        result = pool.map(partial(interaction, speaker=speaker, listener=listener), lexicons)
+        print(result)
+        #results.loc[len(results)] = pd.concat([result[0], general_info], axis=1)
     pool.close()
     pool.join()
 
@@ -420,7 +426,7 @@ def simulation(ambiguity_level, n_signals, n_referents, speaker_order, listener_
 
     # Pickle the results
     filename = 'amb_' + float_to_string(ambiguity_level) + '_lex_' + str(n_signals) + 'x' + str(n_referents) + '_orderS_' +\
-               str(order_speaker) + '_orderL_' + str(order_listener) + '_ent_' + float_to_string(entropy_threshold) + \
+               str(speaker_order) + '_orderL_' + str(listener_order) + '_ent_' + float_to_string(entropy_threshold) + \
                '_nInter_' + str(n_interactions) + '_nSim_' + str(n_runs_simulation) + '.p'
     outfile = open(filename, 'wb')
     pickle.dump(results, outfile)
@@ -438,3 +444,11 @@ def float_to_string(float_object):
     string_new = string.replace('.', ',')
 
     return string_new
+
+def wrapper(arguments):
+    print('test')
+    speaker = arguments[0]
+    listener = arguments[1]
+    lexicon = arguments[2]
+    print(speaker, listener, lexicon)
+    return interaction(speaker, listener, lexicon)
