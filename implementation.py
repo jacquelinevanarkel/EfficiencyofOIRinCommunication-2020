@@ -359,11 +359,10 @@ def communicative_success(intention, referent):
 # Complexity: also a measurement, but not included here
 
 # //////////////////////////////////////////////// Running Simulations ////////////////////////////////////////////////
-def simulation(n_interactions, ambiguity_level, n_signals, n_referents, speaker_order, listener_order, entropy_threshold,
+def simulation(ambiguity_level, n_signals, n_referents, speaker_order, listener_order, entropy_threshold,
                n_runs_simulation):
     """
     Run a simulation of a number of interactions (n_interactions), with the specified parameters.
-    :param n_interactions: int; the number of interactions to be performed in the simulation
     :param ambiguity_level: float (between 0.0 and 1.0); the desired ambiguity level of the lexicon
     :param n_signals: int; the number of signals in the lexicon
     :param n_referents: int; the number of referents in the lexicon
@@ -396,12 +395,16 @@ def simulation(n_interactions, ambiguity_level, n_signals, n_referents, speaker_
 
     general_info = pd.DataFrame([ambiguity_level, n_signals, n_referents, entropy_threshold])
 
-    pool = multiprocessing.Pool(processes=16)
+    pool = multiprocessing.Pool()
+    n_interactions = 2 * n_referents
     for _ in range(n_interactions):
         arguments = zip([speaker]*n_lexicons,[listener]*n_lexicons,lexicons)
         arg_list = list(arguments)
+        print(arg_list[0])
         result = pool.starmap(interaction, arg_list)
         results.loc[len(results)] = pd.concat([result[0], general_info], axis=1)
+    pool.close()
+    pool.join()
 
     # Make sure that the values are integers in order to take the mean
     results['Reached Threshold Order'] = results['Reached Threshold Order'].astype(int)
