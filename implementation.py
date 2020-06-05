@@ -358,10 +358,59 @@ def communicative_success(intention, referent):
 # Complexity: also a measurement, but not included here
 
 # //////////////////////////////////////////////// Running Simulations ////////////////////////////////////////////////
-def simulation(ambiguity_level, n_signals, n_referents, speaker_order, listener_order, entropy_threshold,
+def simulation(ambiguity_level, speaker_order, listener_order, entropy_threshold, lexicon):
+    """
+    Run a simulation of a number of interactions (2 times the number of referents), with the specified parameters.
+    :param ambiguity_level: float (between 0.0 and 1.0); the desired ambiguity level of the lexicon
+    :param speaker_order: int; the order of pragmatic reasoning for the speaker
+    :param listener_order: int; the order of pragmatic reasoning for the listener
+    :param entropy_threshold: int; the entropy threshold
+    :param lexicon: array; the given lexicon to run the simulation with (all interactions)
+    :return: dataframe; consisting of the following information: the intention of the speaker, the inferred referent of
+    the listener, the number of turns, the order of pragmatic reasoning for the speaker and listener,
+    the communicative success, whether the threshold of the order of pragmatic reasoning was reached and the dialogue
+    history
+    """
+
+    # Initialize agents with the order of pragmatic reasoning, agent type, and entropy threshold
+    speaker = Agent(speaker_order, 'Speaker', entropy_threshold)
+    listener = Agent(listener_order, 'Listener', entropy_threshold)
+
+    # Initialize dataframe to store results
+    n_signals = lexicon.shape
+    n_referents = lexicon.shape[1]
+    general_info = pd.DataFrame([ambiguity_level, n_signals, n_referents, entropy_threshold])
+
+    results = pd.DataFrame(
+        columns=['Intention Speaker', 'Inferred Referent Listener', 'Number of Turns', 'Order of Reasoning Speaker',
+                 'Order of Reasoning Listener', 'Communicative Success', 'Reached Threshold Order',
+                 'Reached Threshold Interaction', 'Dialogue History', 'Ambiguity Level', 'Number of Signals',
+                 'Number of Referents', 'Entropy Threshold'])
+
+    # Perform the specified number of interactions for the given simulation
+    n_interactions = 2 * n_referents
+    for _ in range(n_interactions):
+        result = interaction(speaker, listener, lexicon)
+        results.loc[len(results)] = np.concatenate([result, general_info], axis=None)
+
+    return results
+
+
+def float_to_string(float_object):
+    """
+    Takes a float and returns it as a string where the '.' is replaced by a ','.
+    :param float_object: float; the float to be converted
+    :return: string; the float converted into a string where the '.' is replaced by a ','
+    """
+    string = str(float_object)
+    string_new = string.replace('.', ',')
+
+    return string_new
+
+def multi_runs(ambiguity_level, n_signals, n_referents, speaker_order, listener_order, entropy_threshold,
                n_runs_simulation):
     """
-    Run a simulation of a number of interactions (n_interactions), with the specified parameters.
+    Performs multiple runs of a simulation, by choosing a different lexicon per simulation run. 
     :param ambiguity_level: float (between 0.0 and 1.0); the desired ambiguity level of the lexicon
     :param n_signals: int; the number of signals in the lexicon
     :param n_referents: int; the number of referents in the lexicon
@@ -369,15 +418,8 @@ def simulation(ambiguity_level, n_signals, n_referents, speaker_order, listener_
     :param listener_order: int; the order of pragmatic reasoning for the listener
     :param entropy_threshold: int; the entropy threshold
     :param n_runs_simulation: int; the number of runs of the simulation
-    :return: dataframe; consisting of the following information: the intention of the speaker, the inferred referent of
-    the listener, the number of turns, the order of pragmatic reasoning, the communicative success, whether the
-    threshold of the order of pragmatic reasoning was reached, the ambiguity level, the number of signals, the number
-    of referents
+    :return: dataframe; stores the results by pickling them
     """
-
-    # Initialize agents with the order of pragmatic reasoning, agent type, and entropy threshold
-    speaker = Agent(speaker_order, 'Speaker', entropy_threshold)
-    listener = Agent(listener_order, 'Listener', entropy_threshold)
 
     # Generate Lexicons with the number of signals, the number of referents, the ambiguity level and the number of
     # lexicons
@@ -392,57 +434,22 @@ def simulation(ambiguity_level, n_signals, n_referents, speaker_order, listener_
                  'Reached Threshold Interaction', 'Dialogue History', 'Ambiguity Level', 'Number of Signals',
                  'Number of Referents', 'Entropy Threshold'])
 
-    general_info = pd.DataFrame([ambiguity_level, n_signals, n_referents, entropy_threshold])
-
-    # n_interactions = 2 * n_referents
-    # for run in range(n_runs_simulation):
-    #     lexicon = lexicons[run]
-    #     for _ in range(n_interactions):
-    #         result = interaction(speaker, listener, lexicon)
-    #         results.loc[len(results)] = np.concatenate([result, general_info], axis=None)
-
     pool = multiprocessing.Pool()
-    n_interactions = 2 * n_referents
-    for _ in range(n_interactions):
-        arguments = zip([speaker]*n_lexicons,[listener]*n_lexicons,lexicons)
-        arg_list = list(arguments)
-        result = pool.starmap(interaction, arg_list)
-        for index in range(n_runs_simulation):
-            results.loc[len(results)] = np.concatenate([result[index], general_info], axis=None)
+    arguments = zip([ambiguity_level] * n_lexicons, [speaker_order] * n_lexicons, [listener_order] * n_lexicons,
+                    [entropy_threshold] * n_lexicons, lexicons)
+    arg_list = list(arguments)
+    result = pool.starmap(simulation, arg_list)
+    for index in range(n_runs_simulation):
+        results = results.append(result[index])
     pool.close()
     pool.join()
 
     print(results)
 
-    # Make sure that the values are integers in order to take the mean
-    results['Reached Threshold Order'] = results['Reached Threshold Order'].astype(int)
-    results['Reached Threshold Interaction'] = results['Reached Threshold Interaction'].astype(int)
-    results['Communicative Success'] = results['Communicative Success'].astype(int)
-    results['Number of Turns'] = results['Number of Turns'].astype(int)
-
-    # Take the mean of the specified variables
-    simulation_averages = {'Reached Threshold Order': results['Reached Threshold Order'].mean(),
-                           'Reached Threshold Interaction': results['Reached Threshold Interaction'].mean(),
-                           'Communicative Success': results['Communicative Success'].mean(),
-                           'Number of Turns': results['Number of Turns'].mean()}
-
     # Pickle the results
     filename = 'amb_' + float_to_string(ambiguity_level) + '_lex_' + str(n_signals) + 'x' + str(n_referents) + '_orderS_' +\
                str(speaker_order) + '_orderL_' + str(listener_order) + '_ent_' + float_to_string(entropy_threshold) + \
-               '_nInter_' + str(n_interactions) + '_nSim_' + str(n_runs_simulation) + '.p'
+               '_nInter_' + str(2*n_referents) + '_nSim_' + str(n_runs_simulation) + '.p'
     outfile = open(filename, 'wb')
     pickle.dump(results, outfile)
     outfile.close()
-
-    # print(simulation_averages)
-
-def float_to_string(float_object):
-    """
-    Takes a float and returns it as a string where the '.' is replaced by a ','.
-    :param float_object: float; the float to be converted
-    :return: string; the float converted into a string where the '.' is replaced by a ','
-    """
-    string = str(float_object)
-    string_new = string.replace('.', ',')
-
-    return string_new
