@@ -377,7 +377,7 @@ def simulation(ambiguity_level, speaker_order, listener_order, entropy_threshold
     listener = Agent(listener_order, 'Listener', entropy_threshold)
 
     # Initialize dataframe to store results
-    n_signals = lexicon.shape
+    n_signals = lexicon.shape[0]
     n_referents = lexicon.shape[1]
     general_info = pd.DataFrame([ambiguity_level, n_signals, n_referents, entropy_threshold])
 
@@ -423,7 +423,7 @@ def multi_runs(ambiguity_level, n_signals, n_referents, speaker_order, listener_
 
     # Generate Lexicons with the number of signals, the number of referents, the ambiguity level and the number of
     # lexicons
-    lexicons_df = pd.read_json('lexiconset3.json')
+    lexicons_df = pd.read_json('lexiconset_sim.json')
     n_lexicons = n_runs_simulation
     lexicons = lex_retriever.retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicons)
 
