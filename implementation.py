@@ -139,11 +139,11 @@ class Interpretation:
         """
 
         if self.order == 0:
-            output, order_threshold_reached = self.interpretation_literal()
-            return output, order_threshold_reached
+            output, order_threshold_reached, entropy = self.interpretation_literal()
+            return output, order_threshold_reached, entropy, self.norm_lex[self.signal]
         else:
-            output, order_threshold_reached = self.interpretation_pragmatic()
-            return output, order_threshold_reached
+            output, order_threshold_reached, entropy = self.interpretation_pragmatic()
+            return output, order_threshold_reached, entropy, self.norm_lex[self.signal]
 
     def interpretation_literal(self):
         """
@@ -172,7 +172,7 @@ class Interpretation:
         # When the entropy > entropy_threshold return an OIR signal
             output = 'OIR'
 
-        return output, False
+        return output, False, entropy
 
     def interpretation_pragmatic(self):
         """
@@ -211,7 +211,7 @@ class Interpretation:
             referent = self.pick_max_referent(probs_interpretation)
             order_threshold_reached = True
 
-        return referent, order_threshold_reached
+        return referent, order_threshold_reached, entropy
 
     def conditional_entropy(self, probs_interpretation):
         """
@@ -297,12 +297,14 @@ def interaction(speaker, listener, lexicon):
     referent by the listener, the amount of turns, the order of speaker and listener, the communicative success and
     whether the threshold of the order of pragmatic reasoning was reached
     """
-    # Initialize the amount of turns, whether the interaction threshold is reached, the dialogue history and the state
-    # of the listener
+    # Initialize the amount of turns, whether the interaction threshold is reached, the dialogue history, the state
+    # of the listener, the entropy for every turn and the probability distribution for every turn
     turns = 0
     interaction_threshold_reached = False
     dialogue_history = []
     listener_state = 'start'
+    total_entropy = []
+    total_prob_dist = []
 
     # Generate intention: randomly generated from uniform distribution
     n_referents = lexicon.shape[1]
@@ -314,11 +316,16 @@ def interaction(speaker, listener, lexicon):
     while listener_state == 'OIR' or listener_state == 'start':
         produced_signal = Production(lexicon, intention, speaker.order, dialogue_history).produce()
         turns += 1
-        listener_output, order_threshold_reached = Interpretation(lexicon, produced_signal, listener.order,
-                                                                               listener.entropy_threshold,
-                                                                  dialogue_history, order_threshold=2).interpret()
+        listener_output, order_threshold_reached, entropy, prob_dist_signal = Interpretation(lexicon, produced_signal,
+                                                                                             listener.order,
+                                                                                             listener.entropy_threshold,
+                                                                                             dialogue_history,
+                                                                                             order_threshold=2).interpret()
+
         listener_state = listener_output
         dialogue_history.append(produced_signal)
+        total_entropy.append(entropy)
+        total_prob_dist.append(prob_dist_signal)
         turns += 1
 
         # To avoid infinite loops, when you reach a number of turns that is bigger than the twice the number of signals,
@@ -333,7 +340,7 @@ def interaction(speaker, listener, lexicon):
     # Save the wanted information in a pandas dataframe to be returned
     output = pd.DataFrame(np.array([[intention, listener_output, turns, speaker.order, listener.order,
                                                      success, order_threshold_reached, interaction_threshold_reached,
-                                                     dialogue_history]]))
+                                                     dialogue_history, total_entropy, total_prob_dist]]))
 
     return output
 
@@ -383,8 +390,8 @@ def simulation(ambiguity_level, speaker_order, listener_order, entropy_threshold
     results = pd.DataFrame(
         columns=['Intention Speaker', 'Inferred Referent Listener', 'Number of Turns', 'Order of Reasoning Speaker',
                  'Order of Reasoning Listener', 'Communicative Success', 'Reached Threshold Order',
-                 'Reached Threshold Interaction', 'Dialogue History', 'Ambiguity Level', 'Number of Signals',
-                 'Number of Referents', 'Entropy Threshold'])
+                 'Reached Threshold Interaction', 'Dialogue History', 'Entropy', 'Probability Dist. Given Signal',
+                 'Ambiguity Level', 'Number of Signals', 'Number of Referents', 'Entropy Threshold'])
 
     # Perform the specified number of interactions for the given simulation
     n_interactions = 2 * n_referents
@@ -422,7 +429,7 @@ def multi_runs(ambiguity_level, n_signals, n_referents, speaker_order, listener_
 
     # Generate Lexicons with the number of signals, the number of referents, the ambiguity level and the number of
     # lexicons
-    lexicons_df = pd.read_json('lexiconset_sim.json')
+    lexicons_df = pd.read_json('lexiconset3.json')
     n_lexicons = n_runs_simulation
     lexicons = lex_retriever.retrieve_lex(lexicons_df, n_signals, n_referents, ambiguity_level, n_lexicons)
 
@@ -430,8 +437,8 @@ def multi_runs(ambiguity_level, n_signals, n_referents, speaker_order, listener_
     results = pd.DataFrame(
         columns=['Intention Speaker', 'Inferred Referent Listener', 'Number of Turns', 'Order of Reasoning Speaker',
                  'Order of Reasoning Listener', 'Communicative Success', 'Reached Threshold Order',
-                 'Reached Threshold Interaction', 'Dialogue History', 'Ambiguity Level', 'Number of Signals',
-                 'Number of Referents', 'Entropy Threshold'])
+                 'Reached Threshold Interaction', 'Dialogue History', 'Entropy', 'Probability Dist. Given Signal',
+                 'Ambiguity Level', 'Number of Signals', 'Number of Referents', 'Entropy Threshold'])
 
     pool = multiprocessing.Pool()
     arguments = zip([ambiguity_level] * n_lexicons, [speaker_order] * n_lexicons, [listener_order] * n_lexicons,
@@ -442,8 +449,6 @@ def multi_runs(ambiguity_level, n_signals, n_referents, speaker_order, listener_
         results = results.append(result[index])
     pool.close()
     pool.join()
-
-    print(results)
 
     # Pickle the results
     filename = 'amb_' + float_to_string(ambiguity_level) + '_lex_' + str(n_signals) + 'x' + str(n_referents) + '_orderS_' +\
