@@ -10,6 +10,9 @@ results = pd.read_pickle("results.p")
 results_interactional = pd.read_pickle("results_interactional.p")
 results_pragmatic = pd.read_pickle("results_pragmatic.p")
 
+# The part that is commented out are the same plots, but done with matplotlib. The other plotting functions are done
+# with the help of the seaborn packages.
+
 # ------------------------------------------------- Plot the results ---------------------------------------------------
 # # Plot the communicative success per lexicon size with lines for the chance levels & relative CS
 # CS_means_interactional = results_interactional.groupby(["Number of Referents", "Ambiguity Level"])["Communicative Success"].mean()
@@ -403,12 +406,56 @@ results_pragmatic = pd.read_pickle("results_pragmatic.p")
 # plt.show()
 
 # ----------------------------------------------------------------------------------------------------------------------
-# results["Entropy"] = np.where(len(results["Entropy"])==30, results["Entropy"], list(itertools.chain(results["Entropy"], [np.NAN]*(30-len(results["Entropy"])))))
+# Mean entropy difference over time in an interaction
+# In the end only the interactional agents have useful data, the pragmatic ones can be skipped.
+
+# data = []
+# for entropy in results["Entropy"]:
+#     if len(entropy) == 30:
+#         difference = np.diff(np.array(entropy))
+#     else:
+#         new = list(itertools.chain(np.array(entropy), [np.NAN] * (30 - len(entropy))))
+#         difference = np.diff(np.array(new))
+#     data.append(difference)
 #
-# print(results["Entropy"][:30])
+# mean_ent_diff = np.negative(np.nanmean(data, axis=0))
+#
+# sns.lineplot(data=mean_ent_diff)
+# plt.title("Mean Entropy Difference Over Interactions")
+# plt.xticks(np.arange(29), np.arange(2, 31))
+# plt.ylabel("Entropy Difference over Turns (n-1)")
+# plt.xlabel("Turn")
+# plt.show()
 
-#sns.lineplot(x=np.arange(30),y="Entropy",hue="Order of Reasoning Listener",data=results)
+data_interactional = []
+for entropy in results_interactional["Entropy"]:
+    if len(entropy) == 30:
+        difference = np.diff(np.array(entropy))
+    else:
+        new = list(itertools.chain(np.array(entropy), [np.NAN] * (30 - len(entropy))))
+        difference = np.diff(np.array(new))
+    data_interactional.append(difference)
 
+mean_ent_diff_interactional = np.negative(np.nanmean(data_interactional, axis=0))
+
+# data_pragmatic = []
+# for entropy in results_pragmatic["Entropy"]:
+#     if len(entropy) == 30:
+#         difference = np.diff(np.array(entropy))
+#     else:
+#         new = list(itertools.chain(np.array(entropy), [np.NAN] * (30 - len(entropy))))
+#         difference = np.diff(np.array(new))
+#     data_pragmatic.append(difference)
+#
+# mean_ent_diff_pragmatic = np.negative(np.nanmean(data_pragmatic, axis=0))
+
+sns.lineplot(data=mean_ent_diff_interactional)
+plt.title("Mean Entropy Difference Over Interactions for Interactional Agents")
+plt.xticks(np.arange(29, step=2), np.arange(2, 31, step=2))
+plt.ylabel("Entropy Difference over Turns (n-1)")
+plt.xlabel("Turn")
+plt.savefig('/Users/Jacqueline/Documents/Research_Internship/entropy_diff.png')
+plt.show()
 # ----------------------------------------------------------------------------------------------------------------------
 # CS interactional vs pragmatic
 fig, ax = plt.subplots(1,2)
@@ -425,18 +472,24 @@ sns.barplot(x="Ambiguity Level", y="Communicative Success", hue="Number of Refer
 ax[1].set_title("Pragmatic Agents")
 ax[1].set_ylabel("Mean Communicative Success")
 ax[1].set_ylim(0,1)
+plt.savefig('/Users/Jacqueline/Documents/Research_Internship/CS_int_prag.png')
 plt.show()
 
 # Number of referents, ambiguity level, number of turns
 sns.violinplot(x="Ambiguity Level", y="Number of Turns", hue="Number of Referents", data=results_interactional)
 plt.title("Number of Turns for Different Ambiguity levels and Lexicon Sizes")
+plt.savefig('/Users/Jacqueline/Documents/Research_Internship/turns.png')
 plt.show()
 
 # CS by order of reasoning, number of referents
-plt.title("Communicative Success for Different Orders of Pragmatic Reasoning \n (where Listener Ended) and Lexicon Sizes")
+plt.title("Mean Communicative Success for Different Orders of Pragmatic Reasoning \n (where Listener Ended) and Lexicon Sizes")
 results["Order of Reasoning"] = np.where(results["Reached Threshold Order"]==True, 2, results["Order of Reasoning Listener"])
 sns.barplot(x="Order of Reasoning", y="Communicative Success", hue="Number of Referents", data=results)
 plt.ylim(0,1)
+plt.ylabel("Mean Communicative Success")
+plt.hlines(y=[0.25, 0.1, 0.05, 0.25, 0.1, 0.05, 0.25, 0.1, 0.05],xmin=[-0.4, -0.13, 0.13, 0.60, 0.87, 1.13, 1.60, 1.87, 2.13],
+           xmax=[-0.13, 0.13, 0.40, 0.87, 1.13, 1.40, 1.87, 2.13, 2.40])
+plt.savefig('/Users/Jacqueline/Documents/Research_Internship/CS_orders.png')
 plt.show()
 
 # CS by entropy threshold and lexicon size pragmatic vs interactional
@@ -454,11 +507,13 @@ sns.barplot(x="Entropy Threshold", y="Communicative Success", hue="Number of Ref
 ax[1].set_title("Pragmatic Agents")
 ax[1].set_ylabel("Mean Communicative Success")
 ax[1].set_ylim(0,1)
+plt.savefig('/Users/Jacqueline/Documents/Research_Internship/CS_entropy_prag_int.png')
 plt.show()
 
 # Turns for entropy and lexicon size
 sns.violinplot(x="Entropy Threshold", y="Number of Turns", hue="Number of Referents", data=results_interactional)
 plt.title("Number of Turns for Different Entropy Thresholds \n and Lexicon Sizes (Interactional)")
+plt.savefig('/Users/Jacqueline/Documents/Research_Internship/turns_entropy.png')
 plt.show()
 
 # CS for different ambiguity levels and entropy levels per lexicon size
@@ -476,4 +531,5 @@ plt.suptitle("Mean Communicative Success for Different Ambiguity Levels and Entr
 ax[0].set_title("Lexicon: 6x4")
 ax[1].set_title("Lexicon: 15x10")
 ax[2].set_title("Lexicon: 30x20")
+plt.savefig('/Users/Jacqueline/Documents/Research_Internship/CS_ent_amb_lex_heat.png')
 plt.show()
