@@ -450,11 +450,9 @@ mean_ent_diff_interactional = np.negative(np.nanmean(data_interactional, axis=0)
 # mean_ent_diff_pragmatic = np.negative(np.nanmean(data_pragmatic, axis=0))
 
 sns.lineplot(data=mean_ent_diff_interactional)
-plt.title("Mean Entropy Difference Over Interactions for Interactional Agents")
 plt.xticks(np.arange(29, step=2), np.arange(2, 31, step=2))
 plt.ylabel("Entropy Difference over Turns (n-1)")
 plt.xlabel("Turn")
-plt.savefig('/Users/Jacqueline/Documents/Research_Internship/entropy_diff.png')
 plt.show()
 # ----------------------------------------------------------------------------------------------------------------------
 # CS interactional vs pragmatic
@@ -462,7 +460,6 @@ fig, ax = plt.subplots(1,2)
 ax[0].hlines(y=[0.25, 0.1, 0.05, 0.25, 0.1, 0.05, 0.25, 0.1, 0.05],xmin=[-0.4, -0.13, 0.13, 0.60, 0.87, 1.13, 1.60, 1.87, 2.13],
            xmax=[-0.13, 0.13, 0.40, 0.87, 1.13, 1.40, 1.87, 2.13, 2.40])
 sns.barplot(x="Ambiguity Level", y="Communicative Success", hue="Number of Referents", data=results_interactional, ax=ax[0])
-plt.suptitle("Mean Communicative Success for Different Ambiguity levels and Lexicon Sizes")
 ax[0].set_ylabel("Mean Communicative Success")
 ax[0].set_title("Interactional Agents")
 ax[0].set_ylim(0,1)
@@ -472,24 +469,19 @@ sns.barplot(x="Ambiguity Level", y="Communicative Success", hue="Number of Refer
 ax[1].set_title("Pragmatic Agents")
 ax[1].set_ylabel("Mean Communicative Success")
 ax[1].set_ylim(0,1)
-plt.savefig('/Users/Jacqueline/Documents/Research_Internship/CS_int_prag.png')
 plt.show()
 
 # Number of referents, ambiguity level, number of turns
 sns.violinplot(x="Ambiguity Level", y="Number of Turns", hue="Number of Referents", data=results_interactional)
-plt.title("Number of Turns for Different Ambiguity levels and Lexicon Sizes")
-plt.savefig('/Users/Jacqueline/Documents/Research_Internship/turns.png')
 plt.show()
 
 # CS by order of reasoning, number of referents
-plt.title("Mean Communicative Success for Different Orders of Pragmatic Reasoning \n (where Listener Ended) and Lexicon Sizes")
 results["Order of Reasoning"] = np.where(results["Reached Threshold Order"]==True, 2, results["Order of Reasoning Listener"])
 sns.barplot(x="Order of Reasoning", y="Communicative Success", hue="Number of Referents", data=results)
 plt.ylim(0,1)
 plt.ylabel("Mean Communicative Success")
 plt.hlines(y=[0.25, 0.1, 0.05, 0.25, 0.1, 0.05, 0.25, 0.1, 0.05],xmin=[-0.4, -0.13, 0.13, 0.60, 0.87, 1.13, 1.60, 1.87, 2.13],
            xmax=[-0.13, 0.13, 0.40, 0.87, 1.13, 1.40, 1.87, 2.13, 2.40])
-plt.savefig('/Users/Jacqueline/Documents/Research_Internship/CS_orders.png')
 plt.show()
 
 # CS by entropy threshold and lexicon size pragmatic vs interactional
@@ -497,7 +489,6 @@ fig, ax = plt.subplots(1,2)
 ax[0].hlines(y=[0.25, 0.1, 0.05, 0.25, 0.1, 0.05, 0.25, 0.1, 0.05],xmin=[-0.4, -0.13, 0.13, 0.60, 0.87, 1.13, 1.60, 1.87, 2.13],
            xmax=[-0.13, 0.13, 0.40, 0.87, 1.13, 1.40, 1.87, 2.13, 2.40])
 sns.barplot(x="Entropy Threshold", y="Communicative Success", hue="Number of Referents", data=results_interactional, ax=ax[0])
-plt.suptitle("Mean Communicative Success for Different Entropy Thresholds and Lexicon Sizes")
 ax[0].set_ylabel("Mean Communicative Success")
 ax[0].set_ylim(0,1)
 ax[0].set_title("Interactional Agents")
@@ -507,29 +498,46 @@ sns.barplot(x="Entropy Threshold", y="Communicative Success", hue="Number of Ref
 ax[1].set_title("Pragmatic Agents")
 ax[1].set_ylabel("Mean Communicative Success")
 ax[1].set_ylim(0,1)
-plt.savefig('/Users/Jacqueline/Documents/Research_Internship/CS_entropy_prag_int.png')
 plt.show()
 
 # Turns for entropy and lexicon size
 sns.violinplot(x="Entropy Threshold", y="Number of Turns", hue="Number of Referents", data=results_interactional)
-plt.title("Number of Turns for Different Entropy Thresholds \n and Lexicon Sizes (Interactional)")
-plt.savefig('/Users/Jacqueline/Documents/Research_Internship/turns_entropy.png')
+plt.legend(loc='upper left', title="Number of Referents")
 plt.show()
 
 # CS for different ambiguity levels and entropy levels per lexicon size
-lex1 = results[results["Number of Referents"] == 4]
-lex2 = results[results["Number of Referents"] == 10]
-lex3 = results[results["Number of Referents"] == 20]
+lex1 = results_interactional[results_interactional["Number of Referents"] == 4]
+lex2 = results_interactional[results_interactional["Number of Referents"] == 10]
+lex3 = results_interactional[results_interactional["Number of Referents"] == 20]
 data1 = pd.pivot_table(lex1, values='Communicative Success', index=['Entropy Threshold'], columns='Ambiguity Level')
 data2 = pd.pivot_table(lex2, values='Communicative Success', index=['Entropy Threshold'], columns='Ambiguity Level')
 data3 = pd.pivot_table(lex3, values='Communicative Success', index=['Entropy Threshold'], columns='Ambiguity Level')
-fig, ax = plt.subplots(1,3)
-sns.heatmap(data1, ax=ax[0], vmin=0, vmax=1, cmap="YlGnBu")
-sns.heatmap(data2, ax=ax[1], vmin=0, vmax=1, cmap="YlGnBu")
-sns.heatmap(data3, ax=ax[2], vmin=0, vmax=1, cmap="YlGnBu")
-plt.suptitle("Mean Communicative Success for Different Ambiguity Levels and Entropy Levels per Lexicon Sizee")
-ax[0].set_title("Lexicon: 6x4")
-ax[1].set_title("Lexicon: 15x10")
-ax[2].set_title("Lexicon: 30x20")
-plt.savefig('/Users/Jacqueline/Documents/Research_Internship/CS_ent_amb_lex_heat.png')
+
+lex4 = results_pragmatic[results_pragmatic["Number of Referents"] == 4]
+lex5 = results_pragmatic[results_pragmatic["Number of Referents"] == 10]
+lex6 = results_pragmatic[results_pragmatic["Number of Referents"] == 20]
+data4 = pd.pivot_table(lex1, values='Communicative Success', index=['Entropy Threshold'], columns='Ambiguity Level')
+data5 = pd.pivot_table(lex2, values='Communicative Success', index=['Entropy Threshold'], columns='Ambiguity Level')
+data6 = pd.pivot_table(lex3, values='Communicative Success', index=['Entropy Threshold'], columns='Ambiguity Level')
+
+fig, ax = plt.subplots(2,3)
+sns.heatmap(data1, ax=ax[0,0], vmin=0, vmax=1, cmap="YlGnBu", cbar=False)
+sns.heatmap(data2, ax=ax[0,1], vmin=0, vmax=1, cmap="YlGnBu", cbar=False)
+sns.heatmap(data3, ax=ax[0,2], vmin=0, vmax=1, cmap="YlGnBu")
+ax[0,0].set_title("Lexicon: 6x4")
+ax[0,1].set_title("Interactional Agents \n Lexicon: 15x10")
+ax[0,2].set_title("Lexicon: 30x20")
+ax[1,0].set_title(" \n Lexicon: 6x4")
+ax[1,1].set_title(" \n Pragmatic Agents \n Lexicon: 15x10")
+ax[1,2].set_title(" \n Lexicon: 30x20")
+sns.heatmap(data4, ax=ax[1,0], vmin=0, vmax=1, cmap="YlGnBu", cbar=False)
+sns.heatmap(data5, ax=ax[1,1], vmin=0, vmax=1, cmap="YlGnBu", cbar=False)
+sns.heatmap(data6, ax=ax[1,2], vmin=0, vmax=1, cmap="YlGnBu")
+ax[0,1].set_ylabel('')
+ax[0,1].set_xlabel('')
+ax[0,2].set_ylabel('')
+ax[0,2].set_xlabel('')
+ax[1,1].set_ylabel('')
+ax[0,0].set_xlabel('')
+ax[1,2].set_ylabel('')
 plt.show()
