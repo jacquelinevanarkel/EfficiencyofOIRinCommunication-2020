@@ -14,6 +14,7 @@ Run the 'implementation.py' file, while making sure the other files provided (le
 It is important to take into account that reading in the data can take a lot of time as the data files are quite big.
 
 **Exploring the Data**
+
 If you wish to explore the original simulation data as described in the paper, this is made possible by the pickled results in the 'Results' folder. This folder contains three different files:
   1. results.p: the complete results merged into this file.
   2. results_interactional.p: contains the results of the interactional agents only.
