@@ -1,6 +1,6 @@
 # Efficiency of OIR in Communication
 
-**Running the simulations**
+**Running the Simulations**
 
 The folder *Implementation* contains the files needed to run the simulations:
   1. *Implementation.py*: the implementation of the interactional and pragmatic model.
