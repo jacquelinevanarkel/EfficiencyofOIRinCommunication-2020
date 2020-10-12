@@ -22,12 +22,6 @@ for entry in entries.iterdir():
         result = pd.read_pickle(entry)
         results = pd.concat([results, result])
 
-# Make sure that the values are integers/floats in order to take the mean
-results["Communicative Success"] = results["Communicative Success"].astype(int)
-results["Number of Turns"] = results["Number of Turns"].astype(int)
-results["Ambiguity Level"] = results["Ambiguity Level"].astype(float)
-results["Number of Signals"] = results["Number of Signals"].astype(int)
-
 # Replace the entropy threshold for pragmatic agents with order 2 with NaN as it's not applicable
 results.loc[results["Order of Reasoning Listener"] == 2, "Entropy Threshold"] = np.nan
 
@@ -40,33 +34,33 @@ results_1 = results_pragmatic[(results_pragmatic["Order of Reasoning Listener"] 
 results_2 = results_pragmatic[results_pragmatic["Order of Reasoning Listener"] == 2]
 results_frugal = results_pragmatic[(results_pragmatic["Order of Reasoning Listener"] == 1) & (results_pragmatic["Reached Threshold Order"]==True)]
 
-# Pickle the results to be stored and used later for plotting
-filename = 'results.p'
-outfile = open(filename, 'wb')
-pickle.dump(results, outfile)
-outfile.close()
+# Store the results to be used later for plotting
+compression_opts = dict(method='zip',
+                        archive_name='results.csv')
+results.to_csv('results.zip', index=False,
+          compression=compression_opts)
 
-filename = 'results_interactional.p'
-outfile = open(filename, 'wb')
-pickle.dump(results_interactional, outfile)
-outfile.close()
+compression_opts = dict(method='zip',
+                        archive_name='results_interactional.csv')
+results_interactional.to_csv('results_interactional.zip', index=False,
+          compression=compression_opts)
 
-filename = 'results_pragmatic.p'
-outfile = open(filename, 'wb')
-pickle.dump(results_pragmatic, outfile)
-outfile.close()
+compression_opts = dict(method='zip',
+                        archive_name='results_pragmatic.csv')
+results_pragmatic.to_csv('results_pragmatic.zip', index=False,
+          compression=compression_opts)
 
-filename = 'results_1.p'
-outfile = open(filename, 'wb')
-pickle.dump(results_1, outfile)
-outfile.close()
+compression_opts = dict(method='zip',
+                        archive_name='results_1.csv')
+results_1.to_csv('results_1.zip', index=False,
+          compression=compression_opts)
 
-filename = 'results_2.p'
-outfile = open(filename, 'wb')
-pickle.dump(results_2, outfile)
-outfile.close()
+compression_opts = dict(method='zip',
+                        archive_name='results_2.csv')
+results_2.to_csv('results_2.zip', index=False,
+          compression=compression_opts)
 
-filename = 'results_frugal.p'
-outfile = open(filename, 'wb')
-pickle.dump(results_frugal, outfile)
-outfile.close()
+compression_opts = dict(method='zip',
+                        archive_name='results_frugal.csv')
+results_frugal.to_csv('results_frugal.zip', index=False,
+          compression=compression_opts)

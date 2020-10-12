@@ -4,14 +4,46 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import itertools
+from ast import literal_eval
 
 # Read in data
-results = pd.read_pickle("results.p")
-results_interactional = pd.read_pickle("results_interactional.p")
-results_pragmatic = pd.read_pickle("results_pragmatic.p")
-results_1 = pd.read_pickle("results_1.p")
-results_2 = pd.read_pickle("results_2.p")
-results_frugal = pd.read_pickle("results_frugal.p")
+results = pd.read_csv("../Results/results.csv", dtype={"Communicative Success":int, "Number of Turns":int, "Ambiguity Level":float,
+                                            "Number of Signals":int, "Intention Speaker":int,
+                                            "Order of Reasoning Speaker":int, "Order of Reasoning Listener":int,
+                                            "Reached Threshold Order":bool, "Reached Threshold Interaction":bool,
+                                            "Number of Referents":int, "Entropy Threshold":float})
+results_interactional = pd.read_csv("../Results/results_interactional.csv", dtype={"Communicative Success":int, "Number of Turns":int, "Ambiguity Level":float,
+                                            "Number of Signals":int, "Intention Speaker":int,
+                                            "Order of Reasoning Speaker":int, "Order of Reasoning Listener":int,
+                                            "Reached Threshold Order":bool, "Reached Threshold Interaction":bool,
+                                            "Number of Referents":int, "Entropy Threshold":float})
+results_pragmatic = pd.read_csv("../Results/results_pragmatic.csv", dtype={"Communicative Success":int, "Number of Turns":int, "Ambiguity Level":float,
+                                            "Number of Signals":int, "Intention Speaker":int,
+                                            "Order of Reasoning Speaker":int, "Order of Reasoning Listener":int,
+                                            "Reached Threshold Order":bool, "Reached Threshold Interaction":bool,
+                                            "Number of Referents":int, "Entropy Threshold":float})
+results_1 = pd.read_csv("../Results/results_1.csv", dtype={"Communicative Success":int, "Number of Turns":int, "Ambiguity Level":float,
+                                            "Number of Signals":int, "Intention Speaker":int,
+                                            "Order of Reasoning Speaker":int, "Order of Reasoning Listener":int,
+                                            "Reached Threshold Order":bool, "Reached Threshold Interaction":bool,
+                                            "Number of Referents":int, "Entropy Threshold":float})
+results_2 = pd.read_csv("../Results/results_2.csv", dtype={"Communicative Success":int, "Number of Turns":int, "Ambiguity Level":float,
+                                            "Number of Signals":int, "Intention Speaker":int,
+                                            "Order of Reasoning Speaker":int, "Order of Reasoning Listener":int,
+                                            "Reached Threshold Order":bool, "Reached Threshold Interaction":bool,
+                                            "Number of Referents":int, "Entropy Threshold":float})
+results_frugal = pd.read_csv("../Results/results_frugal.csv", dtype={"Communicative Success":int, "Number of Turns":int, "Ambiguity Level":float,
+                                            "Number of Signals":int, "Intention Speaker":int,
+                                            "Order of Reasoning Speaker":int, "Order of Reasoning Listener":int,
+                                            "Reached Threshold Order":bool, "Reached Threshold Interaction":bool,
+                                            "Number of Referents":int, "Entropy Threshold":float})
+
+results["Entropy"] = results["Entropy"].map(literal_eval)
+results_interactional["Entropy"] = results_interactional["Entropy"].map(literal_eval)
+results_pragmatic["Entropy"] = results_pragmatic["Entropy"].map(literal_eval)
+results_1["Entropy"] = results_1["Entropy"].map(literal_eval)
+results_2["Entropy"] = results_2["Entropy"].map(literal_eval)
+results_frugal["Entropy"] = results_frugal["Entropy"].map(literal_eval)
 
 # The first part of the plotting is done using matplotlib. The second part of the plotting is done with the help of the
 # seaborn package in combination with matplotlib.
