@@ -459,13 +459,13 @@ plt.show()
 # ----------------------------------------------------------------------------------------------------------------------
 # Plot of the mean entropy difference over time in an interaction for the interactional agents for different lexicon sizes
 
-results_interactional["Entropy Difference"] = np.where(len(results_interactional["Entropy"])==30, np.diff(np.array(results_interactional["Entropy"])),
-                                                      np.diff(np.array(list(itertools.chain(np.array(results_interactional["Entropy"]), [np.NAN] * (30 - len(results_interactional["Entropy"])))))))
-
 # Create different subsets of the data per lexicon size
 lex0 = results_interactional[results_interactional["Number of Referents"] == 4]
 lex1 = results_interactional[results_interactional["Number of Referents"] == 10]
 lex2 = results_interactional[results_interactional["Number of Referents"] == 20]
+
+# Change the sign of the entropy difference
+mean_ent_diff = np.negative(np.nanmean(data, axis=0))
 
 # Initialise empty lists for the data of the different lexicon sizes
 data_interactional_0 = []
